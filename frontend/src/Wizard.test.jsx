@@ -2,102 +2,204 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import Wizard from './Wizard';
-import axios from 'axios';
+import { apiRequest } from './apiUtils';
 
-// Mock axios to prevent actual API calls during tests
+// Mock the API utility
 import { vi } from 'vitest';
-vi.mock('axios');
+vi.mock('./apiUtils');
+
+// Mock window.FestivalWizardData
+Object.defineProperty(window, 'FestivalWizardData', {
+  value: {
+    apiKey: 'test-api-key',
+    ajaxUrl: 'http://test.com/wp-admin/admin-ajax.php',
+    nonce: 'test-nonce',
+    currentUser: 'Test User'
+  },
+  writable: true
+});
 
 describe('Wizard Component', () => {
   beforeEach(() => {
     // Clear all mocks before each test
-    axios.post.mockClear();
-    vi.restoreAllMocks(); // Restore mocks after each test
+    apiRequest.mockClear();
+    vi.restoreAllMocks();
   });
 
-  test('renders the form correctly', () => {
+  test('renders the first question correctly', () => {
     render(<Wizard />);
     expect(screen.getByText('Festival Track Wizard')).toBeInTheDocument();
-    expect(screen.getByLabelText('Music')).toBeInTheDocument();
-    expect(screen.getByLabelText('Workshops')).toBeInTheDocument();
-    expect(screen.getByLabelText('Music Style')).toBeInTheDocument();
-    expect(screen.getByLabelText('Yoga')).toBeInTheDocument();
-    expect(screen.getByLabelText('Startup Brunch')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /submit/i })).toBeInTheDocument();
+    expect(screen.getByText('Welke rol(len) heb jij?')).toBeInTheDocument();
+    expect(screen.getByLabelText('Leiding')).toBeInTheDocument();
+    expect(screen.getByLabelText('Bestuur of bestuursondersteuning')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /next/i })).toBeInTheDocument();
   });
 
-  test('displays validation errors for interests if none selected', async () => {
+  test('navigates through questions correctly', async () => {
     render(<Wizard />);
-    fireEvent.click(screen.getByRole('button', { name: /submit/i }));
-
+    
+    // First question should be visible
+    expect(screen.getByText('Welke rol(len) heb jij?')).toBeInTheDocument();
+    
+    // Select a role and go to next question
+    fireEvent.click(screen.getByLabelText('Leiding'));
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    
+    // Should now show the second question
     await waitFor(() => {
-      expect(screen.getByText('Select at least one interest.')).toBeInTheDocument();
+      expect(screen.getByText('Van welke speltak ben jij leiding?')).toBeInTheDocument();
     });
   });
 
-  test('displays validation errors for music style if none selected', async () => {
+  test('shows submit button on last question', async () => {
     render(<Wizard />);
-    fireEvent.click(screen.getByRole('button', { name: /submit/i }));
-
+    
+    // Navigate through all questions to reach the last one
+    // First question - select role
+    fireEvent.click(screen.getByLabelText('Leiding'));
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    
+    // Second question - select speltak
     await waitFor(() => {
-      expect(screen.getByText('Select a music style.')).toBeInTheDocument();
+      expect(screen.getByText('Van welke speltak ben jij leiding?')).toBeInTheDocument();
     });
-  });
-
-  test('displays validation errors for sunday option if none selected', async () => {
-    render(<Wizard />);
-    fireEvent.click(screen.getByRole('button', { name: /submit/i }));
-
+    fireEvent.click(screen.getByLabelText('Scouts'));
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    
+    // Continue through remaining questions
     await waitFor(() => {
-      expect(screen.getByText('Choose a Sunday event.')).toBeInTheDocument();
+      expect(screen.getByText('Hoe lang ben jij al vrijwilliger bij Scouting?')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByLabelText('Al best wel even (2-5 jaar)'));
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    
+    await waitFor(() => {
+      expect(screen.getByText('Welke activiteitengebieden vind jij het leukste (kies er maximaal 3)?')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByLabelText('Buitenleven'));
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    
+    // Last question should show submit button
+    await waitFor(() => {
+      expect(screen.getByText('Welke onderwerpen spreken je aan?')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /submit/i })).toBeInTheDocument();
     });
   });
 
   test('submits the form with valid data and shows success alert', async () => {
-    axios.post.mockResolvedValueOnce({ data: 'success' }); // Mock a successful response
-    const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {}); // Mock window.alert
+    apiRequest.mockResolvedValueOnce({ data: 'success' });
+    const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
     render(<Wizard />);
 
-    fireEvent.click(screen.getByLabelText('Music'));
-    fireEvent.change(screen.getByLabelText('Music Style'), { target: { value: 'rock' } });
-    fireEvent.click(screen.getByLabelText('Yoga'));
-
+    // Navigate to last question and fill form
+    fireEvent.click(screen.getByLabelText('Leiding'));
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    
+    await waitFor(() => {
+      expect(screen.getByText('Van welke speltak ben jij leiding?')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByLabelText('Scouts'));
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    
+    await waitFor(() => {
+      expect(screen.getByText('Hoe lang ben jij al vrijwilliger bij Scouting?')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByLabelText('Al best wel even (2-5 jaar)'));
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    
+    await waitFor(() => {
+      expect(screen.getByText('Welke activiteitengebieden vind jij het leukste (kies er maximaal 3)?')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByLabelText('Buitenleven'));
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    
+    await waitFor(() => {
+      expect(screen.getByText('Welke onderwerpen spreken je aan?')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByLabelText('EHBO'));
+    
+    // Submit the form
     fireEvent.click(screen.getByRole('button', { name: /submit/i }));
 
     await waitFor(() => {
-      expect(axios.post).toHaveBeenCalledTimes(1);
-      expect(axios.post).toHaveBeenCalledWith('https://si25.nl/REST/formsubmit/', {
-        interests: ['Music'],
-        musicStyle: 'rock',
-        sundayOption: 'Yoga',
-      });
+      expect(apiRequest).toHaveBeenCalledTimes(1);
+      expect(apiRequest).toHaveBeenCalledWith('post', 'https://test-api.example.com/REST/formsubmit/', expect.objectContaining({
+        roles: ['leiding'],
+        speltakLeiding: ['scouts'],
+        vrijwilligerDuur: 'gemiddeld',
+        activiteitengebieden: ['buitenleven'],
+        onderwerpen: ['ehbo']
+      }));
       expect(alertMock).toHaveBeenCalledWith('Schedule submitted!');
     });
 
-    alertMock.mockRestore(); // Restore window.alert
+    alertMock.mockRestore();
   });
 
   test('handles submission failure and shows error alert', async () => {
-    axios.post.mockRejectedValueOnce(new Error('Network Error')); // Mock a failed response
-    const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {}); // Mock window.alert
-    const consoleErrorMock = vi.spyOn(console, 'error').mockImplementation(() => {}); // Mock console.error
+    const errorMessage = 'API key authentication failed. Please contact an administrator.';
+    apiRequest.mockRejectedValueOnce(new Error(errorMessage));
+    const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const consoleErrorMock = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     render(<Wizard />);
 
-    fireEvent.click(screen.getByLabelText('Music'));
-    fireEvent.change(screen.getByLabelText('Music Style'), { target: { value: 'rock' } });
-    fireEvent.click(screen.getByLabelText('Yoga'));
-
+    // Navigate to last question and fill minimal form
+    fireEvent.click(screen.getByLabelText('Leiding'));
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    
+    await waitFor(() => {
+      expect(screen.getByText('Van welke speltak ben jij leiding?')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByLabelText('Scouts'));
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    
+    await waitFor(() => {
+      expect(screen.getByText('Hoe lang ben jij al vrijwilliger bij Scouting?')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByLabelText('Al best wel even (2-5 jaar)'));
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    
+    await waitFor(() => {
+      expect(screen.getByText('Welke activiteitengebieden vind jij het leukste (kies er maximaal 3)?')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByLabelText('Buitenleven'));
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    
+    await waitFor(() => {
+      expect(screen.getByText('Welke onderwerpen spreken je aan?')).toBeInTheDocument();
+    });
+    
+    // Submit the form
     fireEvent.click(screen.getByRole('button', { name: /submit/i }));
 
     await waitFor(() => {
-      expect(axios.post).toHaveBeenCalledTimes(1);
-      expect(alertMock).toHaveBeenCalledWith('Submission failed.');
-      expect(consoleErrorMock).toHaveBeenCalledWith(expect.any(Error));
+      expect(apiRequest).toHaveBeenCalledTimes(1);
+      expect(alertMock).toHaveBeenCalledWith(errorMessage);
+      expect(consoleErrorMock).toHaveBeenCalledWith('Submission error:', expect.any(Error));
     });
 
     alertMock.mockRestore();
     consoleErrorMock.mockRestore();
+  });
+
+  test('handles back navigation correctly', async () => {
+    render(<Wizard />);
+    
+    // Go to second question
+    fireEvent.click(screen.getByLabelText('Leiding'));
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    
+    await waitFor(() => {
+      expect(screen.getByText('Van welke speltak ben jij leiding?')).toBeInTheDocument();
+    });
+    
+    // Go back to first question
+    fireEvent.click(screen.getByRole('button', { name: /back/i }));
+    
+    await waitFor(() => {
+      expect(screen.getByText('Welke rol(len) heb jij?')).toBeInTheDocument();
+    });
   });
 });

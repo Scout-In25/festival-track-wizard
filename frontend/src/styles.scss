@@ -1,0 +1,16 @@
+/* encapsulate - mostly theme overrides*/
+.FTW {
+  line-height: 1.5;
+  font-family: "Poppins", Sans-serif;
+  font-size: 18px;
+  font-weight: 300;
+
+
+  [type=button], [type=submit], button {
+    border: none;
+  }
+
+  legend {
+    color: var(--e-global-color-primary);
+  }
+}

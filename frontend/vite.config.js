@@ -7,7 +7,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: './src/setupTests.js', // Will create this file
-    globals: true
+    globals: true,
+    exclude: ['**/node_modules/**', '**/tests/**', '**/*.spec.js']
   },
   build: {
     outDir: path.resolve(__dirname, '../build'),
