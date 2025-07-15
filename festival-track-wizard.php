@@ -25,6 +25,20 @@ add_shortcode('festival_track_wizard', function () {
     }
 });
 
+add_shortcode('festival_track_simple', function () {
+    if (is_user_logged_in()) {
+        $api_key = get_option('festival_track_wizard_api_key', '');
+        if (empty($api_key) && current_user_can('manage_options')) {
+            return '<div class="notice notice-warning"><p>Festival Track Wizard: API key not configured. <a href="' . admin_url('options-general.php?page=festival-track-wizard-settings') . '">Configure it here</a>.</p></div>';
+        } elseif (empty($api_key)) {
+            return '<p>Festival Track Wizard is currently being configured. Please try again later.</p>';
+        }
+        return '<div id="festival-track-wizard-root" data-simple-mode="true"></div>';
+    } else {
+        return '<p>Log in of <a href="https://test-scout-in.scouting.nl/scouts-online-login/">creëer een account</a> om je eigen track te maken voor Scout-in 25!</p>';
+    }
+});
+
 add_action('wp_enqueue_scripts', 'festival_track_wizard_enqueue_assets');
 function festival_track_wizard_enqueue_assets() {
     if (!is_user_logged_in()) return;
@@ -32,7 +46,7 @@ function festival_track_wizard_enqueue_assets() {
     global $post;
     if (!is_a($post, 'WP_Post')) return;
 
-    if (has_shortcode($post->post_content, 'festival_track_wizard')) {
+    if (has_shortcode($post->post_content, 'festival_track_wizard') || has_shortcode($post->post_content, 'festival_track_simple')) {
         $api_key = get_option('festival_track_wizard_api_key', '');
         
         wp_enqueue_script(
@@ -56,7 +70,6 @@ function festival_track_wizard_enqueue_assets() {
             'currentUser' => wp_get_current_user()->display_name,
             'apiKey' => $api_key,
             'apiBaseUrl' => get_option('festival_track_wizard_api_base_url', 'https://si25.timoklabbers.nl'),
-            'showTracksOnly' => get_option('festival_track_wizard_show_tracks_only', 0)
         ]);
     }
 }
@@ -80,18 +93,15 @@ function festival_track_wizard_settings_page() {
         
         $api_key = sanitize_text_field($_POST['festival_track_wizard_api_key']);
         $api_base_url = sanitize_text_field($_POST['festival_track_wizard_api_base_url']);
-        $show_tracks_only = isset($_POST['festival_track_wizard_show_tracks_only']) ? 1 : 0;
         
         update_option('festival_track_wizard_api_key', $api_key);
         update_option('festival_track_wizard_api_base_url', $api_base_url);
-        update_option('festival_track_wizard_show_tracks_only', $show_tracks_only);
         
         echo '<div class="notice notice-success"><p>Settings saved!</p></div>';
     }
     
     $api_key = get_option('festival_track_wizard_api_key', '');
     $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://si25.timoklabbers.nl');
-    $show_tracks_only = get_option('festival_track_wizard_show_tracks_only', 0);
     ?>
     <div class="wrap">
         <h1>Festival Track Wizard Settings</h1>
@@ -131,24 +141,6 @@ function festival_track_wizard_settings_page() {
                         />
                         <p class="description">
                             Enter the base URL for the Festival Track Wizard API (without trailing slash).
-                        </p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row">
-                        <label for="festival_track_wizard_show_tracks_only">Show Tracks Only</label>
-                    </th>
-                    <td>
-                        <input 
-                            type="checkbox" 
-                            id="festival_track_wizard_show_tracks_only" 
-                            name="festival_track_wizard_show_tracks_only" 
-                            value="1"
-                            <?php checked($show_tracks_only, 1); ?>
-                        />
-                        <label for="festival_track_wizard_show_tracks_only">Enable tracks-only view with activities list</label>
-                        <p class="description">
-                            When enabled, shows a simplified view with all activities listed chronologically by day and time.
                         </p>
                     </td>
                 </tr>
