@@ -209,7 +209,7 @@ const ActivitiesListPage = () => {
                     <span className="activity-time">
                       {formatTime(activity.start_time)} - {formatTime(activity.end_time)}
                     </span>
-                    <span className="activity-name">{activity.name}</span>
+                    <span className="activity-title">{activity.name}</span>
                     {activity.location && (
                       <span className="activity-location">@ {activity.location}</span>
                     )}

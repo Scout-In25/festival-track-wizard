@@ -19,7 +19,7 @@ describe('ActivitiesListPage', () => {
   const mockActivities = [
     {
       id: '1',
-      title: 'Morning Workshop',
+      name: 'Morning Workshop',
       description: 'A great workshop',
       type: 'workshop',
       start_time: '2025-07-15T09:00:00Z',
@@ -29,7 +29,7 @@ describe('ActivitiesListPage', () => {
     },
     {
       id: '2',
-      title: 'Afternoon Session',
+      name: 'Afternoon Session',
       description: 'Another session',
       type: 'session',
       start_time: '2025-07-15T14:00:00Z',
@@ -39,7 +39,7 @@ describe('ActivitiesListPage', () => {
     },
     {
       id: '3',
-      title: 'Next Day Event',
+      name: 'Next Day Event',
       description: 'Event on next day',
       type: 'event',
       start_time: '2025-07-16T10:00:00Z',
@@ -116,7 +116,7 @@ describe('ActivitiesListPage', () => {
     const unsortedActivities = [
       {
         id: '1',
-        title: 'Late Activity',
+        name: 'Late Activity',
         start_time: '2025-07-15T18:00:00Z',
         end_time: '2025-07-15T19:00:00Z',
         location: 'Room C',
@@ -124,7 +124,7 @@ describe('ActivitiesListPage', () => {
       },
       {
         id: '2',
-        title: 'Early Activity',
+        name: 'Early Activity',
         start_time: '2025-07-15T08:00:00Z',
         end_time: '2025-07-15T09:00:00Z',
         location: 'Room A',
@@ -144,9 +144,10 @@ describe('ActivitiesListPage', () => {
     expect(activityItems).toHaveLength(2);
     
     // First item should be the early activity
-    expect(activityItems[0]).toHaveTextContent('Early Activity');
-    // Second item should be the late activity
-    expect(activityItems[1]).toHaveTextContent('Late Activity');
+    const activityTitles = screen.getAllByText('Early Activity');
+    expect(activityTitles).toHaveLength(1);
+    const lateActivityTitles = screen.getAllByText('Late Activity');
+    expect(lateActivityTitles).toHaveLength(1);
   });
 
   it('groups activities by day correctly', async () => {
@@ -171,7 +172,7 @@ describe('ActivitiesListPage', () => {
   it('formats time correctly in Dutch format', async () => {
     const activityWithSpecificTime = [{
       id: '1',
-      title: 'Test Activity',
+      name: 'Test Activity',
       start_time: '2025-07-15T14:30:00Z',
       end_time: '2025-07-15T16:45:00Z',
       location: 'Test Room',

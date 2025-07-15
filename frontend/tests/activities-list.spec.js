@@ -10,6 +10,19 @@ test.describe('Activities List Page', () => {
         apiKey: 'test-key',
         apiBaseUrl: 'https://test.example.com'
       };
+      
+      // Mock import.meta.env for tests to ensure API key is available
+      Object.defineProperty(window, 'import', {
+        value: {
+          meta: {
+            env: {
+              DEV: true,
+              VITE_API_KEY: 'test-key',
+              VITE_API_BASE_URL: 'https://test.example.com'
+            }
+          }
+        }
+      });
     });
 
     // Mock the API response for activities
@@ -17,7 +30,7 @@ test.describe('Activities List Page', () => {
       const mockActivities = [
         {
           id: '1',
-          title: 'Morning Workshop',
+          name: 'Morning Workshop',
           description: 'A great workshop to start the day',
           type: 'workshop',
           start_time: '2025-07-15T09:00:00Z',
@@ -27,7 +40,7 @@ test.describe('Activities List Page', () => {
         },
         {
           id: '2',
-          title: 'Afternoon Session',
+          name: 'Afternoon Session',
           description: 'Interactive afternoon session',
           type: 'session',
           start_time: '2025-07-15T14:00:00Z',
@@ -37,7 +50,7 @@ test.describe('Activities List Page', () => {
         },
         {
           id: '3',
-          title: 'Next Day Event',
+          name: 'Next Day Event',
           description: 'Special event on the second day',
           type: 'event',
           start_time: '2025-07-16T10:00:00Z',
@@ -205,7 +218,9 @@ test.describe('Show Tracks Only Configuration', () => {
             env: {
               DEV: true,
               VITE_SHOW_TRACKS_ONLY: 'true',
-              VITE_DEV_AUTH_MODE: 'logged_in'
+              VITE_DEV_AUTH_MODE: 'logged_in',
+              VITE_API_KEY: 'test-key',
+              VITE_API_BASE_URL: 'https://test.example.com'
             }
           }
         }
@@ -227,6 +242,19 @@ test.describe('Show Tracks Only Configuration', () => {
         apiKey: 'test-key',
         apiBaseUrl: 'https://test.example.com'
       };
+      
+      // Mock import.meta.env for tests to ensure API key is available
+      Object.defineProperty(window, 'import', {
+        value: {
+          meta: {
+            env: {
+              DEV: true,
+              VITE_API_KEY: 'test-key',
+              VITE_API_BASE_URL: 'https://test.example.com'
+            }
+          }
+        }
+      });
     });
 
     await page.goto('/');
@@ -244,6 +272,19 @@ test.describe('Show Tracks Only Configuration', () => {
         apiKey: 'test-key',
         apiBaseUrl: 'https://test.example.com'
       };
+      
+      // Mock import.meta.env for tests to ensure API key is available
+      Object.defineProperty(window, 'import', {
+        value: {
+          meta: {
+            env: {
+              DEV: true,
+              VITE_API_KEY: 'test-key',
+              VITE_API_BASE_URL: 'https://test.example.com'
+            }
+          }
+        }
+      });
     });
 
     // Navigate to wizard explicitly since the default routing might not work in tests

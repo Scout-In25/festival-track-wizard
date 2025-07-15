@@ -79,7 +79,7 @@
   flex-shrink: 0;
 }
 
-.activity-name {
+.activity-title {
   font-weight: 500;
   color: #2c3e50;
   flex: 1;
@@ -210,7 +210,7 @@
     min-width: auto;
   }
   
-  .activity-name {
+  .activity-title {
     min-width: auto;
   }
 

@@ -9,6 +9,20 @@ test.describe('Festival Track Wizard Form', () => {
         apiKey: 'test-key',
         apiBaseUrl: 'https://test.example.com'
       };
+      
+      // Mock import.meta.env for tests to ensure API key is available
+      Object.defineProperty(window, 'import', {
+        value: {
+          meta: {
+            env: {
+              DEV: true,
+              VITE_API_KEY: 'test-key',
+              VITE_API_BASE_URL: 'https://test.example.com'
+            }
+          }
+        }
+      });
+      
       // Force wizard to show by navigating directly to it
       window.location.hash = '#wizard';
     });
@@ -16,7 +30,7 @@ test.describe('Festival Track Wizard Form', () => {
 
   test('should allow user to fill and submit the form successfully', async ({ page }) => {
     // Intercept the form submission request and mock a successful response
-    await page.route('https://si25.nl/REST/formsubmit/', async route => {
+    await page.route('**/REST/formsubmit/', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -89,7 +103,6 @@ test.describe('Festival Track Wizard Form', () => {
   test('should not submit prematurely when clicking next on intermediate steps', async ({ page }) => {
     let submissionAttempted = false;
     // Intercept the form submission request and mock a successful response
-    // Need to intercept both possible URLs since the base URL might be different
     await page.route('**/REST/formsubmit/', async route => {
       submissionAttempted = true;
       await route.fulfill({
