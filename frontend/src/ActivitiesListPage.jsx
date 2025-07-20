@@ -2,6 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { activitiesService } from './services/api/activitiesService.js';
 import './ActivitiesListPage.css';
 
+// Chevron icon components
+const ChevronRight = () => (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M4.5 2.25L8.25 6L4.5 9.75" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+  </svg>
+);
+
+const ChevronDown = () => (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M2.25 4.5L6 8.25L9.75 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+  </svg>
+);
+
 const ActivitiesListPage = () => {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -217,7 +230,7 @@ const ActivitiesListPage = () => {
                       <span className="activity-type">({activity.type})</span>
                     )}
                     <span className="expand-indicator">
-                      {expandedActivityId === activity.id ? '▼' : '▶'}
+                      {expandedActivityId === activity.id ? <ChevronDown /> : <ChevronRight />}
                     </span>
                   </div>
                   

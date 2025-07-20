@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Festival Track Wizard
  * Description: A personalized festival tracking wizard.
- * Version: 1.10
+ * Version: 1.15
  * Author: D de Zeeuw / NEKO media
  */
 
@@ -26,27 +26,28 @@ add_shortcode('festival_track_wizard', function () {
 });
 
 add_shortcode('festival_track_simple', function () {
-    if (is_user_logged_in()) {
-        $api_key = get_option('festival_track_wizard_api_key', '');
-        if (empty($api_key) && current_user_can('manage_options')) {
-            return '<div class="notice notice-warning"><p>Festival Track Wizard: API key not configured. <a href="' . admin_url('options-general.php?page=festival-track-wizard-settings') . '">Configure it here</a>.</p></div>';
-        } elseif (empty($api_key)) {
-            return '<p>Festival Track Wizard is currently being configured. Please try again later.</p>';
-        }
-        return '<div id="festival-track-wizard-root" data-simple-mode="true"></div>';
-    } else {
-        return '<p>Log in of <a href="https://test-scout-in.scouting.nl/scouts-online-login/">creëer een account</a> om je eigen track te maken voor Scout-in 25!</p>';
+    $api_key = get_option('festival_track_wizard_api_key', '');
+    if (empty($api_key) && current_user_can('manage_options')) {
+        return '<div class="notice notice-warning"><p>Festival Track Wizard: API key not configured. <a href="' . admin_url('options-general.php?page=festival-track-wizard-settings') . '">Configure it here</a>.</p></div>';
+    } elseif (empty($api_key)) {
+        return '<p>Festival Track Wizard is currently being configured. Please try again later.</p>';
     }
+    return '<div id="festival-track-wizard-root" data-simple-mode="true"></div>';
 });
 
 add_action('wp_enqueue_scripts', 'festival_track_wizard_enqueue_assets');
 function festival_track_wizard_enqueue_assets() {
-    if (!is_user_logged_in()) return;
-
     global $post;
     if (!is_a($post, 'WP_Post')) return;
 
-    if (has_shortcode($post->post_content, 'festival_track_wizard') || has_shortcode($post->post_content, 'festival_track_simple')) {
+    $has_full_shortcode = has_shortcode($post->post_content, 'festival_track_wizard');
+    $has_simple_shortcode = has_shortcode($post->post_content, 'festival_track_simple');
+    
+    // For full shortcode, require login
+    if ($has_full_shortcode && !is_user_logged_in()) return;
+    
+    // Load assets if either shortcode is present
+    if ($has_full_shortcode || $has_simple_shortcode) {
         $api_key = get_option('festival_track_wizard_api_key', '');
         
         wp_enqueue_script(
@@ -64,12 +65,16 @@ function festival_track_wizard_enqueue_assets() {
             filemtime(plugin_dir_path(__FILE__) . 'build/style.css')
         );
 
+        // Detect if simple mode is being used
+        $show_tracks_only = has_shortcode($post->post_content, 'festival_track_simple');
+
         wp_localize_script('festival-track-wizard', 'FestivalWizardData', [
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('festival_track_wizard_nonce'),
             'currentUser' => wp_get_current_user()->display_name,
             'apiKey' => $api_key,
             'apiBaseUrl' => get_option('festival_track_wizard_api_base_url', 'https://si25.timoklabbers.nl'),
+            'showTracksOnly' => $show_tracks_only,
         ]);
     }
 }
@@ -157,6 +162,64 @@ function festival_track_wizard_settings_page() {
                 <p><strong>Warning:</strong> No API key configured. The Festival Track Wizard will not function until an API key is provided.</p>
             </div>
         <?php endif; ?>
+        
+        <hr />
+        
+        <h2>Available Shortcodes</h2>
+        <p>Use these shortcodes to display the Festival Track Wizard on your pages or posts. Click on a shortcode to copy it to your clipboard.</p>
+        
+        <table class="wp-list-table widefat fixed striped">
+            <thead>
+                <tr>
+                    <th style="width: 30%;">Shortcode</th>
+                    <th style="width: 70%;">Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        <code style="display: inline-block; padding: 8px 12px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 3px; cursor: pointer;" onclick="navigator.clipboard.writeText('[festival_track_wizard]'); alert('Shortcode copied!');">[festival_track_wizard]</code>
+                    </td>
+                    <td>
+                        <strong>Full Festival Track Wizard</strong><br>
+                        Displays the complete festival track wizard interface with all features. This includes:
+                        <ul style="margin-top: 5px;">
+                            <li>• Interactive track selection and management</li>
+                            <li>• Activity details and descriptions</li>
+                            <li>• Personalized recommendations</li>
+                            <li>• Full user interface</li>
+                        </ul>
+                        <em>Note: Only available to logged-in users.</em>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <code style="display: inline-block; padding: 8px 12px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 3px; cursor: pointer;" onclick="navigator.clipboard.writeText('[festival_track_simple]'); alert('Shortcode copied!');">[festival_track_simple]</code>
+                    </td>
+                    <td>
+                        <strong>Simple Track List View</strong><br>
+                        Displays a simplified, read-only view of festival tracks. This includes:
+                        <ul style="margin-top: 5px;">
+                            <li>• List of available tracks</li>
+                            <li>• Basic track information</li>
+                            <li>• Simplified interface</li>
+                            <li>• No interactive features</li>
+                        </ul>
+                        <em>Note: This view is publicly accessible (no login required).</em>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-left: 4px solid #0073aa;">
+            <h3 style="margin-top: 0;">Usage Instructions</h3>
+            <ol>
+                <li>Copy the desired shortcode by clicking on it</li>
+                <li>Paste the shortcode into any WordPress page or post where you want the Festival Track Wizard to appear</li>
+                <li>Make sure you have configured the API key above for the shortcodes to work properly</li>
+                <li>The content will only be visible to logged-in users</li>
+            </ol>
+        </div>
     </div>
     <?php
 }
@@ -167,5 +230,110 @@ function festival_track_wizard_action_links($links) {
     $settings_link = '<a href="' . admin_url('options-general.php?page=festival-track-wizard-settings') . '">Settings</a>';
     array_unshift($links, $settings_link);
     return $links;
+}
+
+// WordPress AJAX handlers for activities API
+add_action('wp_ajax_festival_activities_all', 'festival_track_wizard_activities_all');
+add_action('wp_ajax_nopriv_festival_activities_all', 'festival_track_wizard_activities_all');
+
+function festival_track_wizard_activities_all() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'festival_track_wizard_nonce')) {
+        wp_die('Security check failed', 'Error', array('response' => 403));
+    }
+
+    $api_key = get_option('festival_track_wizard_api_key', '');
+    $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://si25.timoklabbers.nl');
+    
+    if (empty($api_key)) {
+        wp_send_json_error('API key not configured', 500);
+        return;
+    }
+
+    $url = rtrim($api_base_url, '/') . '/activities/all';
+    
+    $response = wp_remote_get($url, array(
+        'headers' => array(
+            'X-API-KEY' => $api_key,
+            'Content-Type' => 'application/json'
+        ),
+        'timeout' => 30
+    ));
+
+    if (is_wp_error($response)) {
+        wp_send_json_error('Failed to fetch activities: ' . $response->get_error_message(), 500);
+        return;
+    }
+
+    $status_code = wp_remote_retrieve_response_code($response);
+    $body = wp_remote_retrieve_body($response);
+
+    if ($status_code !== 200) {
+        wp_send_json_error('API request failed with status ' . $status_code, $status_code);
+        return;
+    }
+
+    $data = json_decode($body, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        wp_send_json_error('Invalid JSON response from API', 500);
+        return;
+    }
+
+    wp_send_json_success($data);
+}
+
+add_action('wp_ajax_festival_activities_get', 'festival_track_wizard_activities_get');
+add_action('wp_ajax_nopriv_festival_activities_get', 'festival_track_wizard_activities_get');
+
+function festival_track_wizard_activities_get() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'festival_track_wizard_nonce')) {
+        wp_die('Security check failed', 'Error', array('response' => 403));
+    }
+
+    if (empty($_POST['activity_id'])) {
+        wp_send_json_error('Activity ID is required', 400);
+        return;
+    }
+
+    $activity_id = sanitize_text_field($_POST['activity_id']);
+    $api_key = get_option('festival_track_wizard_api_key', '');
+    $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://si25.timoklabbers.nl');
+    
+    if (empty($api_key)) {
+        wp_send_json_error('API key not configured', 500);
+        return;
+    }
+
+    $url = rtrim($api_base_url, '/') . '/activities/' . $activity_id;
+    
+    $response = wp_remote_get($url, array(
+        'headers' => array(
+            'X-API-KEY' => $api_key,
+            'Content-Type' => 'application/json'
+        ),
+        'timeout' => 30
+    ));
+
+    if (is_wp_error($response)) {
+        wp_send_json_error('Failed to fetch activity: ' . $response->get_error_message(), 500);
+        return;
+    }
+
+    $status_code = wp_remote_retrieve_response_code($response);
+    $body = wp_remote_retrieve_body($response);
+
+    if ($status_code !== 200) {
+        wp_send_json_error('API request failed with status ' . $status_code, $status_code);
+        return;
+    }
+
+    $data = json_decode($body, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        wp_send_json_error('Invalid JSON response from API', 500);
+        return;
+    }
+
+    wp_send_json_success($data);
 }
 ?>

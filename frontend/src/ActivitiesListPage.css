@@ -107,6 +107,8 @@
   font-size: 0.8rem;
   margin-left: auto;
   transition: transform 0.2s ease;
+  display: flex;
+  align-items: center;
 }
 
 .activity-details {

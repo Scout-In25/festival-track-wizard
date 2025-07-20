@@ -33,15 +33,17 @@ export const getApiKey = () => {
  * @returns {string} The API base URL
  */
 export const getApiBaseUrl = () => {
-  // Check if we're in development mode and have an environment variable
-  if (import.meta.env.DEV && import.meta.env.VITE_API_BASE_URL) {
+  // In development mode, use Vite proxy to avoid CORS issues
+  if (import.meta.env.DEV) {
     if (import.meta.env.VITE_DEBUG) {
-      console.log('Using API base URL from environment variable (development mode)');
+      console.log('Using Vite proxy for API calls (development mode)');
     }
-    return import.meta.env.VITE_API_BASE_URL;
+    // All API calls will be proxied through /api in development
+    return '/api';
   }
 
-  // In production or when no env var is set, use WordPress data
+  // In production, use WordPress data
+  // Important: In production, activitiesService will use WordPress AJAX instead
   const apiBaseUrl = window.FestivalWizardData?.apiBaseUrl;
   return apiBaseUrl || 'https://si25.timoklabbers.nl';
 };
