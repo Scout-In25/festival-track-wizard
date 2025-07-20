@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Festival Track Wizard
  * Description: A personalized festival tracking wizard.
- * Version: 1.22
+ * Version: 1.23
  * Author: D de Zeeuw / NEKO media
  */
 
@@ -68,10 +68,19 @@ function festival_track_wizard_enqueue_assets() {
         // Detect if simple mode is being used
         $show_tracks_only = has_shortcode($post->post_content, 'festival_track_simple');
 
+        $current_user = wp_get_current_user();
+        $user_data = array(
+            'username' => $current_user->user_login,
+            'email' => $current_user->user_email,
+            'firstName' => $current_user->first_name,
+            'lastName' => $current_user->last_name,
+            'displayName' => $current_user->display_name,
+        );
+        
         wp_localize_script('festival-track-wizard', 'FestivalWizardData', [
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('festival_track_wizard_nonce'),
-            'currentUser' => wp_get_current_user()->display_name,
+            'currentUser' => $user_data,
             'apiKey' => $api_key,
             'apiBaseUrl' => get_option('festival_track_wizard_api_base_url', 'https://si25.timoklabbers.nl'),
             'showTracksOnly' => $show_tracks_only,
@@ -378,5 +387,88 @@ function festival_track_wizard_activities_get() {
     }
 
     wp_send_json_success($data);
+}
+
+// WordPress AJAX handler for fetching participant profile
+add_action('wp_ajax_festival_participant_profile', 'festival_track_wizard_participant_profile');
+
+function festival_track_wizard_participant_profile() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'festival_track_wizard_nonce')) {
+        wp_die('Security check failed', 'Error', array('response' => 403));
+    }
+
+    // Get current user
+    $current_user = wp_get_current_user();
+    if (!$current_user->exists()) {
+        wp_send_json_error('User not logged in', 401);
+        return;
+    }
+
+    $api_key = get_option('festival_track_wizard_api_key', '');
+    $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://si25.timoklabbers.nl');
+    
+    if (empty($api_key)) {
+        wp_send_json_error('API key not configured', 500);
+        return;
+    }
+
+    // Use the WordPress username to fetch participant profile
+    $username = $current_user->user_login;
+    $url = rtrim($api_base_url, '/') . '/participants/' . urlencode($username);
+    
+    $response = wp_remote_get($url, array(
+        'headers' => array(
+            'X-API-KEY' => $api_key,
+            'Content-Type' => 'application/json'
+        ),
+        'timeout' => 30
+    ));
+
+    if (is_wp_error($response)) {
+        wp_send_json_error('Failed to fetch participant profile: ' . $response->get_error_message(), 500);
+        return;
+    }
+
+    $status_code = wp_remote_retrieve_response_code($response);
+    $body = wp_remote_retrieve_body($response);
+
+    // If participant not found (404), return user data so frontend can handle it
+    if ($status_code === 404) {
+        wp_send_json_success(array(
+            'participant' => null,
+            'wordpress_user' => array(
+                'username' => $current_user->user_login,
+                'email' => $current_user->user_email,
+                'first_name' => $current_user->first_name,
+                'last_name' => $current_user->last_name,
+                'display_name' => $current_user->display_name,
+            )
+        ));
+        return;
+    }
+
+    if ($status_code !== 200) {
+        wp_send_json_error('API request failed with status ' . $status_code, $status_code);
+        return;
+    }
+
+    $data = json_decode($body, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        wp_send_json_error('Invalid JSON response from API', 500);
+        return;
+    }
+
+    // Return both participant data and WordPress user data
+    wp_send_json_success(array(
+        'participant' => $data,
+        'wordpress_user' => array(
+            'username' => $current_user->user_login,
+            'email' => $current_user->user_email,
+            'first_name' => $current_user->first_name,
+            'last_name' => $current_user->last_name,
+            'display_name' => $current_user->display_name,
+        )
+    ));
 }
 ?>

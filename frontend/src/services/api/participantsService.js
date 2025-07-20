@@ -3,6 +3,7 @@
  * Handles all participant-related API operations
  */
 import { BaseApiService, apiRequest } from '../../apiUtils.js';
+import { dataService } from '../dataService.js';
 
 class ParticipantsService extends BaseApiService {
   constructor() {
@@ -24,6 +25,14 @@ class ParticipantsService extends BaseApiService {
    */
   async getByUsername(username) {
     return apiRequest('get', `/participants/${username}`);
+  }
+
+  /**
+   * Get current user profile
+   * @returns {Promise} User profile data including participant and wordpress user
+   */
+  async getCurrentUserProfile() {
+    return dataService.getUserProfile();
   }
 
   /**

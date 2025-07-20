@@ -7,7 +7,18 @@ test.describe('Festival Track Wizard Form', () => {
       window.FestivalWizardData = {
         showTracksOnly: false,
         apiKey: 'test-key',
-        apiBaseUrl: 'https://test.example.com'
+        apiBaseUrl: 'https://test.example.com',
+        ajaxUrl: '/wp-admin/admin-ajax.php',
+        nonce: 'test-nonce-123',
+        activitiesTitle: 'Festival Activiteiten',
+        activitiesIntro: 'Hier vind je alle activiteiten van het festival, chronologisch geordend per dag en tijd. Klik op een activiteit voor meer informatie.',
+        currentUser: {
+          username: 'test_user',
+          email: 'test@example.com',
+          firstName: 'Test',
+          lastName: 'User',
+          displayName: 'Test User'
+        }
       };
       
       // Mock import.meta.env for tests to ensure API key is available

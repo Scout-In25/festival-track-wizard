@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import Wizard from './Wizard.jsx';
 import TrackPage from './TrackPage.jsx';
 import ActivitiesListPage from './ActivitiesListPage.jsx';
+import { DataProvider } from './contexts/DataProvider.jsx';
 
 if (import.meta.env.DEV) {
   import('./dev-only.css');
@@ -79,7 +80,9 @@ function App() {
 
   return (
     <React.StrictMode>
-      <ComponentToRender class="FTW" />
+      <DataProvider>
+        <ComponentToRender class="FTW" />
+      </DataProvider>
     </React.StrictMode>
   );
 }

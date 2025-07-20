@@ -2,43 +2,24 @@
  * TrackList Component
  * Example component demonstrating the use of API services
  */
-import React, { useState, useEffect } from 'react';
-import { tracksService } from '../services/index.js';
+import React from 'react';
+import { useDataContext } from '../contexts/DataProvider.jsx';
 
 const TrackList = () => {
-  const [tracks, setTracks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const fetchTracks = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const response = await tracksService.getAll();
-        setTracks(response.data);
-      } catch (err) {
-        setError(err.message);
-        console.error('Failed to fetch tracks:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTracks();
-  }, []);
+  const { 
+    tracks, 
+    tracksLoading: loading, 
+    tracksError: error, 
+    subscribeToTrack 
+  } = useDataContext();
 
   const handleSubscribe = async (trackId, username = 'current_user') => {
-    try {
-      await tracksService.subscribeScout(username, trackId);
+    const result = await subscribeToTrack(trackId, username);
+    
+    if (result.success) {
       alert('Successfully subscribed to track!');
-      
-      // Refresh tracks to get updated participant count
-      const response = await tracksService.getAll();
-      setTracks(response.data);
-    } catch (err) {
-      alert(`Failed to subscribe: ${err.message}`);
+    } else {
+      alert(`Failed to subscribe: ${result.error}`);
     }
   };
 
