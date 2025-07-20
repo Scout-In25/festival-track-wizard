@@ -1,6 +1,6 @@
 {
   "name": "festival-track-wizard",
-  "version": "1.15",
+  "version": "1.22",
   "type": "module",
   "scripts": {
     "dev": "vite",

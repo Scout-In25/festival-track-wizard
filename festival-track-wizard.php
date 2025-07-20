@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Festival Track Wizard
  * Description: A personalized festival tracking wizard.
- * Version: 1.15
+ * Version: 1.22
  * Author: D de Zeeuw / NEKO media
  */
 
@@ -75,6 +75,8 @@ function festival_track_wizard_enqueue_assets() {
             'apiKey' => $api_key,
             'apiBaseUrl' => get_option('festival_track_wizard_api_base_url', 'https://si25.timoklabbers.nl'),
             'showTracksOnly' => $show_tracks_only,
+            'activitiesTitle' => get_option('festival_track_wizard_activities_title', 'Festival Activiteiten'),
+            'activitiesIntro' => get_option('festival_track_wizard_activities_intro', 'Hier vind je alle activiteiten van het festival, chronologisch geordend per dag en tijd. Klik op een activiteit voor meer informatie.'),
         ]);
     }
 }
@@ -98,15 +100,21 @@ function festival_track_wizard_settings_page() {
         
         $api_key = sanitize_text_field($_POST['festival_track_wizard_api_key']);
         $api_base_url = sanitize_text_field($_POST['festival_track_wizard_api_base_url']);
+        $activities_title = sanitize_text_field($_POST['festival_track_wizard_activities_title']);
+        $activities_intro = sanitize_textarea_field($_POST['festival_track_wizard_activities_intro']);
         
         update_option('festival_track_wizard_api_key', $api_key);
         update_option('festival_track_wizard_api_base_url', $api_base_url);
+        update_option('festival_track_wizard_activities_title', $activities_title);
+        update_option('festival_track_wizard_activities_intro', $activities_intro);
         
         echo '<div class="notice notice-success"><p>Settings saved!</p></div>';
     }
     
     $api_key = get_option('festival_track_wizard_api_key', '');
     $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://si25.timoklabbers.nl');
+    $activities_title = get_option('festival_track_wizard_activities_title', 'Festival Activiteiten');
+    $activities_intro = get_option('festival_track_wizard_activities_intro', 'Hier vind je alle activiteiten van het festival, chronologisch geordend per dag en tijd. Klik op een activiteit voor meer informatie.');
     ?>
     <div class="wrap">
         <h1>Festival Track Wizard Settings</h1>
@@ -146,6 +154,41 @@ function festival_track_wizard_settings_page() {
                         />
                         <p class="description">
                             Enter the base URL for the Festival Track Wizard API (without trailing slash).
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="festival_track_wizard_activities_title">Activities List Title</label>
+                    </th>
+                    <td>
+                        <input 
+                            type="text" 
+                            id="festival_track_wizard_activities_title" 
+                            name="festival_track_wizard_activities_title" 
+                            value="<?php echo esc_attr($activities_title); ?>" 
+                            class="regular-text"
+                            placeholder="Festival Activiteiten"
+                        />
+                        <p class="description">
+                            Enter the title to display at the top of the activities list page.
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="festival_track_wizard_activities_intro">Activities List Introduction</label>
+                    </th>
+                    <td>
+                        <textarea 
+                            id="festival_track_wizard_activities_intro" 
+                            name="festival_track_wizard_activities_intro" 
+                            rows="3"
+                            class="large-text"
+                            placeholder="Hier vind je alle activiteiten van het festival, chronologisch geordend per dag en tijd. Klik op een activiteit voor meer informatie."
+                        ><?php echo esc_textarea($activities_intro); ?></textarea>
+                        <p class="description">
+                            Enter the introduction text to display below the title on the activities list page.
                         </p>
                     </td>
                 </tr>
