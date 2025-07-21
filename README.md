@@ -23,6 +23,9 @@ This plugin helps attendees navigate the festival's diverse offerings and create
 - 🛡️ **Secure API** - Protected data access with API key authentication
 - 🎨 **Accessible Design** - Inclusive user experience
 
+## Codebase tutorial
+Visit the [Code2Tutorial.com](https://code2tutorial.com/tutorial/cd52266e-cacc-441d-ad32-aa4fea4fcba3/index.md) for an in-depth explanation.
+
 ## Demo
 
 Visit the [live demo](https://scout-in.scouting.nl/programma/) to see the Festival Track Wizard in action.
