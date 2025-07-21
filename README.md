@@ -25,7 +25,7 @@ This plugin helps attendees navigate the festival's diverse offerings and create
 
 ## Demo
 
-Visit the [live demo](https://your-demo-site.com) to see the Festival Track Wizard in action.
+Visit the [live demo](https://scout-in.scouting.nl/programma/) to see the Festival Track Wizard in action.
 
 ## Table of Contents
 
