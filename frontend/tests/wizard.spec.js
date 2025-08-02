@@ -11,7 +11,7 @@ test.describe('Festival Track Wizard Form', () => {
         ajaxUrl: '/wp-admin/admin-ajax.php',
         nonce: 'test-nonce-123',
         activitiesTitle: 'Festival Activiteiten',
-        activitiesIntro: 'Hier vind je alle activiteiten van het festival, chronologisch geordend per dag en tijd. Klik op een activiteit voor meer informatie.',
+        activitiesIntro: 'Hier vind je alle activiteiten van het festival',
         currentUser: {
           username: 'test_user',
           email: 'test@example.com',

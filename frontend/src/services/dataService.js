@@ -46,7 +46,10 @@ class DataService {
     const result = await response.json();
     
     if (!result.success) {
-      throw new Error(result.data || 'WordPress AJAX request failed');
+      console.error('WordPress AJAX error:', result);
+      // Try to extract meaningful error message
+      const errorMessage = result.data?.message || result.data || 'WordPress AJAX request failed';
+      throw new Error(errorMessage);
     }
 
     return result.data;

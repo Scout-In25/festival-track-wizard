@@ -110,7 +110,7 @@ test.describe('Activities List Page', () => {
         ajaxUrl: '/wp-admin/admin-ajax.php',
         nonce: 'test-nonce-123',
         activitiesTitle: 'Festival Activiteiten',
-        activitiesIntro: 'Hier vind je alle activiteiten van het festival, chronologisch geordend per dag en tijd. Klik op een activiteit voor meer informatie.',
+        activitiesIntro: 'Hier vind je alle activiteiten van het festival',
         currentUser: {
           username: 'test_user',
           email: 'test@example.com',
@@ -155,7 +155,7 @@ test.describe('Activities List Page', () => {
 
     // Check page title and intro
     await expect(page.locator('h1')).toContainText('Festival Activiteiten');
-    await expect(page.locator('p').first()).toContainText('Hier vind je alle activiteiten van het festival');
+    await expect(page.locator('p').first()).toContainText('Hier vind je alle activiteiten');
 
     // Wait for activities to load with debugging
     await page.waitForTimeout(3000); // Give component time to process data
@@ -467,7 +467,7 @@ test.describe('Show Tracks Only Configuration', () => {
         ajaxUrl: '/wp-admin/admin-ajax.php',
         nonce: 'test-nonce-123',
         activitiesTitle: 'Festival Activiteiten',
-        activitiesIntro: 'Hier vind je alle activiteiten van het festival, chronologisch geordend per dag en tijd. Klik op een activiteit voor meer informatie.',
+        activitiesIntro: 'Hier vind je alle activiteiten van het festival',
         currentUser: {
           username: 'test_user',
           email: 'test@example.com',
@@ -510,7 +510,7 @@ test.describe('Show Tracks Only Configuration', () => {
         ajaxUrl: '/wp-admin/admin-ajax.php',
         nonce: 'test-nonce-123',
         activitiesTitle: 'Festival Activiteiten',
-        activitiesIntro: 'Hier vind je alle activiteiten van het festival, chronologisch geordend per dag en tijd. Klik op een activiteit voor meer informatie.',
+        activitiesIntro: 'Hier vind je alle activiteiten van het festival',
         currentUser: {
           username: 'test_user',
           email: 'test@example.com',
@@ -549,7 +549,7 @@ test.describe('Show Tracks Only Configuration', () => {
         apiKey: 'test-key',
         apiBaseUrl: 'https://test.example.com',
         activitiesTitle: 'Festival Activiteiten',
-        activitiesIntro: 'Hier vind je alle activiteiten van het festival, chronologisch geordend per dag en tijd. Klik op een activiteit voor meer informatie.',
+        activitiesIntro: 'Hier vind je alle activiteiten van het festival',
         currentUser: {
           username: 'test_user',
           email: 'test@example.com',

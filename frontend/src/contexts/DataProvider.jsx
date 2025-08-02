@@ -196,6 +196,8 @@ export const DataProvider = ({ children }) => {
   // Subscribe to activity (with refresh)
   const subscribeToActivity = useCallback(async (activityId, username) => {
     try {
+      console.log('DataProvider: Subscribing to activity', { activityId, username });
+      // IMPORTANT: activitiesService.subscribe expects (username, activityId) order!
       await activitiesService.subscribe(username, activityId);
       // Refresh user profile to update subscribed activities
       await fetchUserProfile(true);
@@ -209,6 +211,8 @@ export const DataProvider = ({ children }) => {
   // Unsubscribe from activity (with refresh)
   const unsubscribeFromActivity = useCallback(async (activityId, username) => {
     try {
+      console.log('DataProvider: Unsubscribing from activity', { activityId, username });
+      // IMPORTANT: activitiesService.unsubscribe expects (username, activityId) order!
       await activitiesService.unsubscribe(username, activityId);
       // Refresh user profile to update subscribed activities
       await fetchUserProfile(true);

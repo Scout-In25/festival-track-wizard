@@ -143,7 +143,7 @@ const ActivitiesListPage = () => {
   const [showMyScheduleOnly, setShowMyScheduleOnly] = useState(false);
   const [subscribingActivities, setSubscribingActivities] = useState({});
   
-  const { participant, isUserLoggedIn, subscribeToActivity, unsubscribeFromActivity } = useDataContext();
+  const { participant, wordpressUser, isUserLoggedIn, subscribeToActivity, unsubscribeFromActivity } = useDataContext();
   const { showInfo, showError } = useToast();
 
   useEffect(() => {
@@ -340,6 +340,17 @@ const ActivitiesListPage = () => {
     return activities.filter(activity => participant.activities.includes(activity.id));
   };
 
+  // Get conflicting activities for a target activity
+  const getConflictingActivities = (targetActivity) => {
+    // Only check conflicts for logged-in users who aren't already subscribed to this activity
+    if (!isUserLoggedIn || isUserSubscribed(targetActivity.id)) return [];
+    
+    const subscribedActivities = getSubscribedActivities();
+    return subscribedActivities.filter(subscribedActivity => 
+      hasTimeOverlap(targetActivity, subscribedActivity)
+    );
+  };
+
   // Check if activity is eligible for subscription
   const isActivityEligible = (activity) => {
     // Only apply filtering for logged in users
@@ -373,11 +384,21 @@ const ActivitiesListPage = () => {
   };
 
   const handleSubscribeToggle = async (activityId) => {
-    if (!isUserLoggedIn || !participant?.username) {
+    if (!isUserLoggedIn) {
       showError('Je moet ingelogd zijn om je aan te melden voor activiteiten');
       return;
     }
 
+    // Get username with fallback to WordPress user
+    const username = participant?.username || wordpressUser?.username;
+    
+    if (!username) {
+      console.error('No username available:', { participant, wordpressUser });
+      showError('Gebruikersnaam niet gevonden. Probeer de pagina te vernieuwen.');
+      return;
+    }
+
+    console.log('Subscribe toggle:', { activityId, username, isSubscribed: isUserSubscribed(activityId) });
     setSubscribingActivities(prev => ({ ...prev, [activityId]: true }));
 
     try {
@@ -385,18 +406,19 @@ const ActivitiesListPage = () => {
       let result;
       
       if (isSubscribed) {
-        result = await unsubscribeFromActivity(activityId, participant.username);
+        result = await unsubscribeFromActivity(activityId, username);
         if (result.success) {
           showInfo('Je bent afgemeld voor deze activiteit');
         }
       } else {
-        result = await subscribeToActivity(activityId, participant.username);
+        result = await subscribeToActivity(activityId, username);
         if (result.success) {
           showInfo('Je bent aangemeld voor deze activiteit');
         }
       }
 
       if (!result.success) {
+        console.error('Subscription failed:', result);
         showError(result.error || 'Er is iets misgegaan bij het aan-/afmelden');
       }
     } catch (err) {
@@ -412,6 +434,7 @@ const ActivitiesListPage = () => {
     const isLoading = loadingDetails[activity.id];
     const isSubscribed = isUserSubscribed(activity.id);
     const isSubscribing = subscribingActivities[activity.id];
+    const conflictingActivities = getConflictingActivities(activity);
 
     if (isLoading) {
       return (
@@ -475,6 +498,7 @@ const ActivitiesListPage = () => {
               }}>
                 {isSubscribed ? '✓ In je schema' : 
                  getActivityStatus(activity) === 'full' ? '❌ Activiteit vol' : 
+                 conflictingActivities.length > 0 ? '⚠️ Tijdconflict' :
                  '📅 Voeg toe aan je schema'}
               </h4>
               <p style={{ 
@@ -487,7 +511,9 @@ const ActivitiesListPage = () => {
                   ? 'Deze activiteit staat in je persoonlijke schema' 
                   : getActivityStatus(activity) === 'full' 
                     ? 'Deze activiteit heeft geen vrije plekken meer'
-                    : 'Voeg deze activiteit toe aan je persoonlijke schema'
+                    : conflictingActivities.length > 0
+                      ? 'Je bent al aangemeld voor overlappende activiteiten'
+                      : 'Voeg deze activiteit toe aan je persoonlijke schema'
                 }
               </p>
             </div>
@@ -509,6 +535,26 @@ const ActivitiesListPage = () => {
               }}>
                 <span>🚫</span>
                 Activiteit is vol
+              </div>
+            ) : conflictingActivities.length > 0 && !isSubscribed ? (
+              <div 
+                className="conflict-section" 
+                role="alert"
+                aria-label={`Tijdconflict met ${conflictingActivities.length} activiteit${conflictingActivities.length > 1 ? 'en' : ''}`}
+              >
+                <div className="conflict-title">
+                  Overlappende activiteiten:
+                </div>
+                <ul className="conflict-activities">
+                  {conflictingActivities.map(conflict => (
+                    <li key={conflict.id} className="conflict-activity-item">
+                      <span className="conflict-activity-name">{conflict.name}</span>
+                      <span className="conflict-activity-time">
+                        {formatTime(conflict.start_time)} - {formatTime(conflict.end_time)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             ) : (
               <button 
@@ -654,7 +700,7 @@ const ActivitiesListPage = () => {
     <div className="activities-list-page">
       <h1>{window.FestivalWizardData?.activitiesTitle || 'Scout-in Activiteiten'}</h1>
       <p>
-        {window.FestivalWizardData?.activitiesIntro || 'Hier vind je alle activiteiten van scout-in, chronologisch geordend per dag en tijd. Klik op een activiteit voor meer informatie.'}
+        {window.FestivalWizardData?.activitiesIntro || 'Hier vind je alle activiteiten van Scout-in. Je kunt de activiteiten bekijken en beheren in deze lijst.'}
       </p>
 
       {/* Combined Header with Title and Filters */}

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Festival Track Wizard
  * Description: A personalized festival tracking wizard.
- * Version: 1.25
+ * Version: 1.28
  * Author: D de Zeeuw / NEKO media
  */
 
@@ -86,7 +86,7 @@ function festival_track_wizard_enqueue_assets() {
             'apiBaseUrl' => get_option('festival_track_wizard_api_base_url', 'https://si25.timoklabbers.nl'),
             'showTracksOnly' => $show_tracks_only,
             'activitiesTitle' => get_option('festival_track_wizard_activities_title', 'Festival Activiteiten'),
-            'activitiesIntro' => get_option('festival_track_wizard_activities_intro', 'Hier vind je alle activiteiten van het festival, chronologisch geordend per dag en tijd. Klik op een activiteit voor meer informatie.'),
+            'activitiesIntro' => get_option('festival_track_wizard_activities_intro', 'Hier vind je alle activiteiten van Scout-in. Je kunt de activiteiten bekijken en beheren in deze lijst.'),
         ]);
     }
 }
@@ -124,7 +124,7 @@ function festival_track_wizard_settings_page() {
     $api_key = get_option('festival_track_wizard_api_key', '');
     $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://si25.timoklabbers.nl');
     $activities_title = get_option('festival_track_wizard_activities_title', 'Festival Activiteiten');
-    $activities_intro = get_option('festival_track_wizard_activities_intro', 'Hier vind je alle activiteiten van het festival, chronologisch geordend per dag en tijd. Klik op een activiteit voor meer informatie.');
+    $activities_intro = get_option('festival_track_wizard_activities_intro', 'Hier vind je alle activiteiten van Scout-in. Je kunt de activiteiten bekijken en beheren in deze lijst.');
     ?>
     <div class="wrap">
         <h1>Festival Track Wizard Settings</h1>
@@ -195,7 +195,7 @@ function festival_track_wizard_settings_page() {
                             name="festival_track_wizard_activities_intro" 
                             rows="3"
                             class="large-text"
-                            placeholder="Hier vind je alle activiteiten van het festival, chronologisch geordend per dag en tijd. Klik op een activiteit voor meer informatie."
+                            placeholder="Hier vind je alle activiteiten van Scout-in. Je kunt de activiteiten bekijken en beheren in deze lijst."
                         ><?php echo esc_textarea($activities_intro); ?></textarea>
                         <p class="description">
                             Enter the introduction text to display below the title on the activities list page.
@@ -477,12 +477,18 @@ function festival_track_wizard_participant_profile() {
 add_action('wp_ajax_festival_activities_subscribe', 'festival_track_wizard_activities_subscribe');
 
 function festival_track_wizard_activities_subscribe() {
+    // Log the start of the request
+    error_log('FESTIVAL: Subscribe request started');
+    error_log('FESTIVAL: POST data: ' . print_r($_POST, true));
+    
     // Verify nonce
     if (!wp_verify_nonce($_POST['nonce'], 'festival_track_wizard_nonce')) {
+        error_log('FESTIVAL: Nonce verification failed');
         wp_die('Security check failed', 'Error', array('response' => 403));
     }
 
     if (empty($_POST['username']) || empty($_POST['activity_id'])) {
+        error_log('FESTIVAL: Missing username or activity_id');
         wp_send_json_error('Username and activity ID are required', 400);
         return;
     }
@@ -492,35 +498,54 @@ function festival_track_wizard_activities_subscribe() {
     $api_key = get_option('festival_track_wizard_api_key', '');
     $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://si25.timoklabbers.nl');
     
+    error_log('FESTIVAL: Username: ' . $username);
+    error_log('FESTIVAL: Activity ID: ' . $activity_id);
+    error_log('FESTIVAL: API Base URL: ' . $api_base_url);
+    error_log('FESTIVAL: API Key present: ' . (empty($api_key) ? 'NO' : 'YES'));
+    
     if (empty($api_key)) {
+        error_log('FESTIVAL: API key not configured');
         wp_send_json_error('API key not configured', 500);
         return;
     }
 
     $url = rtrim($api_base_url, '/') . '/activities/subscribe/' . $username . '/' . $activity_id;
+    error_log('FESTIVAL: Request URL: ' . $url);
     
-    $response = wp_remote_request($url, array(
+    $request_args = array(
         'method' => 'PUT',
         'headers' => array(
             'X-API-KEY' => $api_key,
             'Content-Type' => 'application/json'
         ),
         'timeout' => 30
-    ));
+    );
+    error_log('FESTIVAL: Request args: ' . print_r($request_args, true));
+    
+    $response = wp_remote_request($url, $request_args);
 
     if (is_wp_error($response)) {
-        wp_send_json_error('Failed to subscribe to activity: ' . $response->get_error_message(), 500);
+        $error_message = $response->get_error_message();
+        error_log('FESTIVAL: WP Error: ' . $error_message);
+        wp_send_json_error('Failed to subscribe to activity: ' . $error_message, 500);
         return;
     }
 
     $status_code = wp_remote_retrieve_response_code($response);
     $body = wp_remote_retrieve_body($response);
+    $headers = wp_remote_retrieve_headers($response);
+
+    error_log('FESTIVAL: Response status: ' . $status_code);
+    error_log('FESTIVAL: Response body: ' . $body);
+    error_log('FESTIVAL: Response headers: ' . print_r($headers, true));
 
     if ($status_code !== 200 && $status_code !== 201 && $status_code !== 204) {
-        wp_send_json_error('API request failed with status ' . $status_code, $status_code);
+        error_log('FESTIVAL: API request failed with status ' . $status_code . ', body: ' . $body);
+        wp_send_json_error('API request failed with status ' . $status_code . ': ' . $body, $status_code);
         return;
     }
 
+    error_log('FESTIVAL: Subscribe successful');
     wp_send_json_success(array('message' => 'Successfully subscribed to activity'));
 }
 
