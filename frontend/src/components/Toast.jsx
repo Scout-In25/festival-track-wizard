@@ -12,13 +12,13 @@ const Toast = ({ id, type, message, onClose }) => {
   const getTypeStyles = () => {
     switch (type) {
       case 'error':
-        return 'bg-red-500 text-white';
+        return 'bg-red-100 text-red-700 border border-red-400';
       case 'warning':
-        return 'bg-yellow-500 text-white';
+        return 'bg-yellow-100 text-yellow-700 border border-yellow-400';
       case 'info':
-        return 'bg-blue-500 text-white';
+        return 'bg-blue-100 text-blue-700 border border-blue-400';
       default:
-        return 'bg-gray-500 text-white';
+        return 'bg-gray-100 text-gray-700 border border-gray-400';
     }
   };
 
@@ -58,10 +58,17 @@ const Toast = ({ id, type, message, onClose }) => {
       </div>
       <button
         onClick={() => onClose(id)}
-        className="ml-4 text-white hover:text-gray-200 focus:outline-none p-1"
+        className="ml-4 bg-white text-gray-800 hover:bg-gray-200 focus:outline-none p-2 rounded border border-gray-300"
+        style={{
+          width: '32px',
+          height: '32px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
         aria-label="Close"
       >
-        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>

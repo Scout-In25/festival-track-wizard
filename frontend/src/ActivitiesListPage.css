@@ -46,10 +46,6 @@
     transition: all 0.2s ease;
 }
 
-.activity-item.expanded {
-    border-color: var(--e-global-color-primary);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
 
 .activity-header {
     cursor: pointer;
@@ -66,10 +62,6 @@
     background: #e9ecef;
 }
 
-.activity-item.expanded .activity-header {
-    background: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-}
 
 .activity-time {
   font-weight: 600;
@@ -111,21 +103,7 @@
   align-items: center;
 }
 
-.activity-details {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.3s ease;
-}
 
-.activity-details.expanded {
-  max-height: 1000px;
-}
-
-.activity-details-content {
-  padding: 16px;
-  background: #fafbfc;
-  border-top: 1px solid #dee2e6;
-}
 
 .detail-section {
   margin-bottom: 16px;
@@ -404,10 +382,6 @@
   background: #e9ecef;
 }
 
-.simple-activity-item.expanded {
-  z-index: 1;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
 
 .simple-activity-header {
   padding: 4px 0;
@@ -450,22 +424,6 @@
   transition: transform 0.2s ease;
 }
 
-/* Simple view activity details */
-.simple-activity-item .activity-details {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.3s ease;
-}
-
-.simple-activity-item .activity-details.expanded {
-  max-height: 1000px;
-}
-
-.simple-activity-item .activity-details-content {
-  padding: 12px 0;
-  background: transparent;
-  border-top: none;
-}
 
 /* Responsive design for simple view */
 @media (max-width: 768px) {
@@ -627,4 +585,107 @@
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Modal animations */
+@keyframes modalFadeIn {
+  0% { 
+    opacity: 0; 
+  }
+  100% { 
+    opacity: 1; 
+  }
+}
+
+@keyframes modalSlideIn {
+  0% { 
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px); 
+  }
+  100% { 
+    opacity: 1;
+    transform: scale(1) translateY(0); 
+  }
+}
+
+/* Modal content transition animation */
+.modal-content-wrapper {
+  opacity: 1;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.modal-content-wrapper.transitioning {
+  opacity: 0;
+}
+
+/* Clickable conflict styles */
+.conflict-item {
+  cursor: pointer;
+  padding: 8px;
+  margin: 4px 0;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.conflict-item:hover {
+  background-color: #f8f9fa;
+  border-color: #dee2e6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.conflict-item:focus {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+  background-color: #f8f9fa;
+}
+
+.conflict-item:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* Conflict unsubscribe button styles */
+.conflict-unsubscribe-btn:focus {
+  outline: 2px solid #dc3545;
+  outline-offset: 2px;
+}
+
+.conflict-unsubscribe-btn:focus-visible {
+  outline: 2px solid #dc3545;
+  outline-offset: 2px;
+}
+
+/* Time slot styles */
+.time-slot-item:hover {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.time-slot-action-btn:focus {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.time-slot-action-btn:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* Modal responsive styles */
+@media (max-width: 768px) {
+  .modal-backdrop {
+    padding: 0 !important;
+  }
+  
+  .modal-backdrop > div {
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    height: 100vh;
+  }
+  
+  .conflict-item {
+    padding: 12px;
+    margin: 6px 0;
+  }
 }

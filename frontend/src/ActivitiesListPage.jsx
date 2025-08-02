@@ -3,6 +3,7 @@ import { activitiesService } from './services/api/activitiesService.js';
 import { useDataContext } from './contexts/DataProvider.jsx';
 import { useToast } from './hooks/useToast';
 import { validateActivities, deduplicateActivitiesByTitleAndTime, analyzeDuplicates, deduplicateActivities, createTitleHash } from './utils/activityDeduplication.js';
+import ActivityDetailsModal from './components/ActivityDetailsModal.jsx';
 import './ActivitiesListPage.css';
 
 // Icon components
@@ -135,7 +136,9 @@ const ActivitiesListPage = () => {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [expandedActivityId, setExpandedActivityId] = useState(null);
+  const [modalActivityId, setModalActivityId] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalTransitioning, setIsModalTransitioning] = useState(false);
   const [activityDetails, setActivityDetails] = useState({});
   const [loadingDetails, setLoadingDetails] = useState({});
   const [isSimpleView, setIsSimpleView] = useState(true);
@@ -273,14 +276,9 @@ const ActivitiesListPage = () => {
   };
 
   const handleActivityClick = async (activityId) => {
-    // If clicking on already expanded activity, collapse it
-    if (expandedActivityId === activityId) {
-      setExpandedActivityId(null);
-      return;
-    }
-
-    // Expand the clicked activity
-    setExpandedActivityId(activityId);
+    // Open modal for the clicked activity
+    setModalActivityId(activityId);
+    setIsModalOpen(true);
 
     // If we don't have details for this activity yet, fetch them
     if (!activityDetails[activityId]) {
@@ -293,7 +291,7 @@ const ActivitiesListPage = () => {
         }));
       } catch (err) {
         console.error('Failed to load activity details:', err);
-        // Still allow expansion but show error state
+        // Still allow modal to open but show error state
         setActivityDetails(prev => ({ 
           ...prev, 
           [activityId]: { error: 'Kon details niet laden' } 
@@ -301,6 +299,121 @@ const ActivitiesListPage = () => {
       } finally {
         setLoadingDetails(prev => ({ ...prev, [activityId]: false }));
       }
+    }
+  };
+
+  // Handle modal close
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setModalActivityId(null);
+    setIsModalTransitioning(false);
+  };
+
+  // Handle switching to a different activity within the modal
+  const handleSwitchToActivity = async (activityId) => {
+    // Start fade-out animation
+    setIsModalTransitioning(true);
+    
+    // Wait for fade-out animation to complete
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    // Switch to new activity
+    setModalActivityId(activityId);
+    
+    // Fetch activity details if we don't have them yet
+    if (!activityDetails[activityId]) {
+      setLoadingDetails(prev => ({ ...prev, [activityId]: true }));
+      try {
+        const response = await activitiesService.getById(activityId);
+        setActivityDetails(prev => ({ 
+          ...prev, 
+          [activityId]: response.data 
+        }));
+      } catch (err) {
+        console.error('Failed to load activity details:', err);
+        setActivityDetails(prev => ({ 
+          ...prev, 
+          [activityId]: { error: 'Kon details niet laden' } 
+        }));
+      } finally {
+        setLoadingDetails(prev => ({ ...prev, [activityId]: false }));
+      }
+    }
+    
+    // Wait a short moment for content to update, then start fade-in
+    setTimeout(() => setIsModalTransitioning(false), 50);
+  };
+
+  // Handle unsubscribing from a conflicting activity
+  const handleUnsubscribeFromConflict = async (activityId) => {
+    // Get username with fallback to WordPress user
+    const username = participant?.username || wordpressUser?.username;
+    
+    if (!username) {
+      console.error('No username available for unsubscribe:', { participant, wordpressUser });
+      showError('Gebruikersnaam niet gevonden. Probeer de pagina te vernieuwen.');
+      return;
+    }
+
+    console.log('Unsubscribing from conflict:', { activityId, username });
+    setSubscribingActivities(prev => ({ ...prev, [activityId]: true }));
+
+    try {
+      const result = await unsubscribeFromActivity(activityId, username);
+      if (result.success) {
+        showInfo('Je bent afgemeld voor deze activiteit');
+        // The conflict will automatically disappear since user is no longer subscribed
+      } else {
+        console.error('Unsubscribe failed:', result);
+        showError(result.error || 'Er is iets misgegaan bij het afmelden');
+      }
+    } catch (err) {
+      console.error('Failed to unsubscribe from conflict:', err);
+      showError(err.message || 'Er is iets misgegaan bij het afmelden');
+    } finally {
+      setSubscribingActivities(prev => ({ ...prev, [activityId]: false }));
+    }
+  };
+
+  // Handle subscribing/unsubscribing from time slots
+  const handleTimeSlotSubscribe = async (timeSlotActivityId) => {
+    // Get username with fallback to WordPress user
+    const username = participant?.username || wordpressUser?.username;
+    
+    if (!username) {
+      console.error('No username available for time slot action:', { participant, wordpressUser });
+      showError('Gebruikersnaam niet gevonden. Probeer de pagina te vernieuwen.');
+      return;
+    }
+
+    const isSubscribed = isUserSubscribed(timeSlotActivityId);
+    console.log('Time slot subscription toggle:', { timeSlotActivityId, username, isSubscribed });
+    setSubscribingActivities(prev => ({ ...prev, [timeSlotActivityId]: true }));
+
+    try {
+      let result;
+      
+      if (isSubscribed) {
+        result = await unsubscribeFromActivity(timeSlotActivityId, username);
+        if (result.success) {
+          showInfo('Je bent afgemeld voor dit tijdslot');
+        }
+      } else {
+        result = await subscribeToActivity(timeSlotActivityId, username);
+        if (result.success) {
+          showInfo('Je bent aangemeld voor dit tijdslot');
+        }
+      }
+
+      if (!result.success) {
+        console.error('Time slot subscription failed:', result);
+        showError(result.error || 'Er is iets misgegaan bij het aan-/afmelden');
+      }
+    } catch (err) {
+      console.error('Failed to toggle time slot subscription:', err);
+      showError(err.message || 'Er is iets misgegaan bij het aan-/afmelden');
+    } finally {
+      setSubscribingActivities(prev => ({ ...prev, [timeSlotActivityId]: false }));
     }
   };
 
@@ -349,6 +462,31 @@ const ActivitiesListPage = () => {
     return subscribedActivities.filter(subscribedActivity => 
       hasTimeOverlap(targetActivity, subscribedActivity)
     );
+  };
+
+  // Get available time slots for an activity (same name, different times)
+  const getActivityTimeSlots = (targetActivity) => {
+    if (!targetActivity || !activities.length) return [];
+    
+    const titleHash = createTitleHash(targetActivity.name || targetActivity.title || '');
+    if (!titleHash) return [];
+    
+    return activities
+      .filter(activity => {
+        // Exclude the current activity itself
+        if (activity.id === targetActivity.id) return false;
+        
+        // Match by title hash
+        const activityTitleHash = createTitleHash(activity.name || activity.title || '');
+        return activityTitleHash === titleHash;
+      })
+      .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
+      .map(slot => ({
+        ...slot,
+        isSubscribed: isUserSubscribed(slot.id),
+        status: getActivityStatus(slot),
+        hasConflict: isUserLoggedIn ? getConflictingActivities(slot).length > 0 : false
+      }));
   };
 
   // Check if activity is eligible for subscription
@@ -429,209 +567,6 @@ const ActivitiesListPage = () => {
     }
   };
 
-  const renderActivityDetails = (activity) => {
-    const details = activityDetails[activity.id];
-    const isLoading = loadingDetails[activity.id];
-    const isSubscribed = isUserSubscribed(activity.id);
-    const isSubscribing = subscribingActivities[activity.id];
-    const conflictingActivities = getConflictingActivities(activity);
-
-    if (isLoading) {
-      return (
-        <div className="activity-details-content">
-          <p>Details laden...</p>
-        </div>
-      );
-    }
-
-    if (!details) {
-      return null;
-    }
-
-    if (details.error) {
-      return (
-        <div className="activity-details-content">
-          <p className="error-text">{details.error}</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="activity-details-content" data-activity-id={activity.id}>
-        {details.description && (
-          <div className="detail-section">
-            <h4>Beschrijving</h4>
-            <p>{details.description}</p>
-          </div>
-        )}
-        
-
-        {details.image_url && (
-          <div className="detail-section">
-            <h4>Afbeelding</h4>
-            <img 
-              src={details.image_url} 
-              alt={details.name || activity.name}
-              className="activity-image"
-            />
-          </div>
-        )}
-
-
-        {isUserLoggedIn && (
-          <div className="schedule-section" style={{ 
-            marginTop: '20px', 
-            padding: '16px', 
-            backgroundColor: '#f8f9ff', 
-            borderRadius: '8px', 
-            border: '1px solid #e1e5f2' 
-          }}>
-            <div style={{ marginBottom: '12px' }}>
-              <h4 style={{ 
-                margin: '0 0 4px 0', 
-                fontSize: '16px', 
-                fontWeight: '600', 
-                color: '#2d3748',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                {isSubscribed ? '✓ In je schema' : 
-                 getActivityStatus(activity) === 'full' ? '❌ Activiteit vol' : 
-                 conflictingActivities.length > 0 ? '⚠️ Tijdconflict' :
-                 '📅 Voeg toe aan je schema'}
-              </h4>
-              <p style={{ 
-                margin: '0', 
-                fontSize: '13px', 
-                color: '#64748b',
-                lineHeight: '1.4'
-              }}>
-                {isSubscribed 
-                  ? 'Deze activiteit staat in je persoonlijke schema' 
-                  : getActivityStatus(activity) === 'full' 
-                    ? 'Deze activiteit heeft geen vrije plekken meer'
-                    : conflictingActivities.length > 0
-                      ? 'Je bent al aangemeld voor overlappende activiteiten'
-                      : 'Voeg deze activiteit toe aan je persoonlijke schema'
-                }
-              </p>
-            </div>
-            
-            {getActivityStatus(activity) === 'full' && !isSubscribed ? (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '12px 20px',
-                backgroundColor: '#e5e7eb',
-                color: '#6b7280',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '15px',
-                fontWeight: '600',
-                width: '100%',
-                justifyContent: 'center'
-              }}>
-                <span>🚫</span>
-                Activiteit is vol
-              </div>
-            ) : conflictingActivities.length > 0 && !isSubscribed ? (
-              <div 
-                className="conflict-section" 
-                role="alert"
-                aria-label={`Tijdconflict met ${conflictingActivities.length} activiteit${conflictingActivities.length > 1 ? 'en' : ''}`}
-              >
-                <div className="conflict-title">
-                  Overlappende activiteiten:
-                </div>
-                <ul className="conflict-activities">
-                  {conflictingActivities.map(conflict => (
-                    <li key={conflict.id} className="conflict-activity-item">
-                      <span className="conflict-activity-name">{conflict.name}</span>
-                      <span className="conflict-activity-time">
-                        {formatTime(conflict.start_time)} - {formatTime(conflict.end_time)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <button 
-                onClick={() => handleSubscribeToggle(activity.id)}
-                disabled={isSubscribing}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '12px 20px',
-                  backgroundColor: isSubscribed ? '#f59e0b' : '#7c3aed',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: isSubscribing ? 'not-allowed' : 'pointer',
-                  opacity: isSubscribing ? 0.6 : 1,
-                  fontSize: '15px',
-                  fontWeight: '600',
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                  width: '100%',
-                  justifyContent: 'center'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSubscribing) {
-                    e.target.style.transform = 'translateY(-1px)';
-                    e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSubscribing) {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-                  }
-                }}
-              >
-                {isSubscribing ? (
-                  <>
-                    <div style={{ 
-                      width: '16px', 
-                      height: '16px', 
-                      border: '2px solid transparent',
-                      borderTop: '2px solid currentColor',
-                      borderRadius: '50%',
-                      animation: 'spin 1s linear infinite'
-                    }} />
-                    Even geduld...
-                  </>
-                ) : isSubscribed ? (
-                  <>
-                    <CalendarCheckIcon />
-                    Verwijder uit schema
-                  </>
-                ) : (
-                  <>
-                    <CalendarPlusIcon />
-                    Voeg toe aan schema
-                  </>
-                )}
-              </button>
-            )}
-            
-            {(activity.capacity || activity.metadata?.max_participants) && (
-              <p style={{ 
-                margin: '8px 0 0 0', 
-                fontSize: '12px', 
-                color: '#64748b',
-                textAlign: 'center'
-              }}>
-                📍 {activity.current_subscriptions || activity.current_participants || 0} van {activity.capacity || activity.metadata?.max_participants} plekken bezet
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
 
   const renderSimpleList = (activitiesList) => {
     // Process activities for simple view: deduplicate by title and sort alphabetically
@@ -644,12 +579,12 @@ const ActivitiesListPage = () => {
     return (
       <ul className="simple-activities-list">
         {sortedActivities.map(activity => (
-          <li key={activity.id} className={`simple-activity-item ${expandedActivityId === activity.id ? 'expanded' : ''}`}>
+          <li key={activity.id} className="simple-activity-item">
             <div 
               className="simple-activity-header"
               onClick={() => handleActivityClick(activity.id)}
             >
-              <span className="simple-activity-title" style={{ fontWeight: expandedActivityId === activity.id ? 'bold' : 'normal' }}>{activity.name}</span>
+              <span className="simple-activity-title">{activity.name}</span>
               {activity.location && (
                 <span className="simple-activity-location">@ {activity.location}</span>
               )}
@@ -658,11 +593,8 @@ const ActivitiesListPage = () => {
               )}
               {isUserLoggedIn && <StatusIndicator status={getActivityStatus(activity)} />}
               <span className="expand-indicator">
-                {expandedActivityId === activity.id ? <ChevronDown /> : <ChevronRight />}
+                <ChevronRight />
               </span>
-            </div>
-            <div className={`activity-details ${expandedActivityId === activity.id ? 'expanded' : ''}`}>
-              {expandedActivityId === activity.id && renderActivityDetails(activity)}
             </div>
           </li>
         ))}
@@ -771,7 +703,7 @@ const ActivitiesListPage = () => {
             <h2>{formatDate(dayKey)}</h2>
             <ul className="activities-list">
               {dayActivities.map(activity => (
-                <li key={activity.id} className={`activity-item ${expandedActivityId === activity.id ? 'expanded' : ''}`}>
+                <li key={activity.id} className="activity-item">
                   <div 
                     className="activity-header"
                     onClick={() => handleActivityClick(activity.id)}
@@ -779,7 +711,7 @@ const ActivitiesListPage = () => {
                     <span className="activity-time">
                       {formatTime(activity.start_time)} - {formatTime(activity.end_time)}
                     </span>
-                    <span className="activity-title" style={{ fontWeight: expandedActivityId === activity.id ? 'bold' : 'normal' }}>{activity.name}</span>
+                    <span className="activity-title">{activity.name}</span>
                     {activity.location && (
                       <span className="activity-location">@ {activity.location}</span>
                     )}
@@ -788,12 +720,8 @@ const ActivitiesListPage = () => {
                     )}
                     {isUserLoggedIn && <StatusIndicator status={getActivityStatus(activity)} />}
                     <span className="expand-indicator">
-                      {expandedActivityId === activity.id ? <ChevronDown /> : <ChevronRight />}
+                      <ChevronRight />
                     </span>
-                  </div>
-                  
-                  <div className={`activity-details ${expandedActivityId === activity.id ? 'expanded' : ''}`}>
-                    {expandedActivityId === activity.id && renderActivityDetails(activity)}
                   </div>
                 </li>
               ))}
@@ -802,6 +730,27 @@ const ActivitiesListPage = () => {
         ))
         )
       )}
+      
+      {/* Activity Details Modal */}
+      <ActivityDetailsModal
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+        activity={modalActivityId ? activities.find(a => a.id === modalActivityId) : null}
+        activityDetails={activityDetails}
+        isLoading={loadingDetails[modalActivityId]}
+        isUserLoggedIn={isUserLoggedIn}
+        isUserSubscribed={isUserSubscribed}
+        isSubscribing={subscribingActivities}
+        conflictingActivities={modalActivityId ? getConflictingActivities(activities.find(a => a.id === modalActivityId) || {}) : []}
+        getActivityStatus={getActivityStatus}
+        handleSubscribeToggle={handleSubscribeToggle}
+        formatTime={formatTime}
+        onSwitchToActivity={handleSwitchToActivity}
+        isTransitioning={isModalTransitioning}
+        onUnsubscribeFromConflict={handleUnsubscribeFromConflict}
+        availableTimeSlots={modalActivityId ? getActivityTimeSlots(activities.find(a => a.id === modalActivityId) || {}) : []}
+        onTimeSlotSubscribe={handleTimeSlotSubscribe}
+      />
     </div>
   );
 };
