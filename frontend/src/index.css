@@ -6,3 +6,33 @@ html, body {
   line-height: 1.5;
   -webkit-text-size-adjust: 100%;
 }
+
+/* Toast animations */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.toast {
+  animation: slideInRight 0.3s ease-out forwards;
+  transition: all 0.3s ease-out;
+}
+
+.toast.fade-out {
+  animation: fadeOut 0.3s ease-out forwards;
+}

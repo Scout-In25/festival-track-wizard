@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Festival Track Wizard
  * Description: A personalized festival tracking wizard.
- * Version: 1.23
+ * Version: 1.25
  * Author: D de Zeeuw / NEKO media
  */
 
@@ -75,6 +75,7 @@ function festival_track_wizard_enqueue_assets() {
             'firstName' => $current_user->first_name,
             'lastName' => $current_user->last_name,
             'displayName' => $current_user->display_name,
+            'ticket_type' => get_user_meta($current_user->ID, 'festival_ticket_type', true) ?: 'standard',
         );
         
         wp_localize_script('festival-track-wizard', 'FestivalWizardData', [
@@ -470,5 +471,107 @@ function festival_track_wizard_participant_profile() {
             'display_name' => $current_user->display_name,
         )
     ));
+}
+
+// WordPress AJAX handler for subscribing to activity
+add_action('wp_ajax_festival_activities_subscribe', 'festival_track_wizard_activities_subscribe');
+
+function festival_track_wizard_activities_subscribe() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'festival_track_wizard_nonce')) {
+        wp_die('Security check failed', 'Error', array('response' => 403));
+    }
+
+    if (empty($_POST['username']) || empty($_POST['activity_id'])) {
+        wp_send_json_error('Username and activity ID are required', 400);
+        return;
+    }
+
+    $username = sanitize_text_field($_POST['username']);
+    $activity_id = sanitize_text_field($_POST['activity_id']);
+    $api_key = get_option('festival_track_wizard_api_key', '');
+    $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://si25.timoklabbers.nl');
+    
+    if (empty($api_key)) {
+        wp_send_json_error('API key not configured', 500);
+        return;
+    }
+
+    $url = rtrim($api_base_url, '/') . '/activities/subscribe/' . $username . '/' . $activity_id;
+    
+    $response = wp_remote_request($url, array(
+        'method' => 'PUT',
+        'headers' => array(
+            'X-API-KEY' => $api_key,
+            'Content-Type' => 'application/json'
+        ),
+        'timeout' => 30
+    ));
+
+    if (is_wp_error($response)) {
+        wp_send_json_error('Failed to subscribe to activity: ' . $response->get_error_message(), 500);
+        return;
+    }
+
+    $status_code = wp_remote_retrieve_response_code($response);
+    $body = wp_remote_retrieve_body($response);
+
+    if ($status_code !== 200 && $status_code !== 201 && $status_code !== 204) {
+        wp_send_json_error('API request failed with status ' . $status_code, $status_code);
+        return;
+    }
+
+    wp_send_json_success(array('message' => 'Successfully subscribed to activity'));
+}
+
+// WordPress AJAX handler for unsubscribing from activity
+add_action('wp_ajax_festival_activities_unsubscribe', 'festival_track_wizard_activities_unsubscribe');
+
+function festival_track_wizard_activities_unsubscribe() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'festival_track_wizard_nonce')) {
+        wp_die('Security check failed', 'Error', array('response' => 403));
+    }
+
+    if (empty($_POST['username']) || empty($_POST['activity_id'])) {
+        wp_send_json_error('Username and activity ID are required', 400);
+        return;
+    }
+
+    $username = sanitize_text_field($_POST['username']);
+    $activity_id = sanitize_text_field($_POST['activity_id']);
+    $api_key = get_option('festival_track_wizard_api_key', '');
+    $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://si25.timoklabbers.nl');
+    
+    if (empty($api_key)) {
+        wp_send_json_error('API key not configured', 500);
+        return;
+    }
+
+    $url = rtrim($api_base_url, '/') . '/activities/unsubscribe/' . $username . '/' . $activity_id;
+    
+    $response = wp_remote_request($url, array(
+        'method' => 'PUT',
+        'headers' => array(
+            'X-API-KEY' => $api_key,
+            'Content-Type' => 'application/json'
+        ),
+        'timeout' => 30
+    ));
+
+    if (is_wp_error($response)) {
+        wp_send_json_error('Failed to unsubscribe from activity: ' . $response->get_error_message(), 500);
+        return;
+    }
+
+    $status_code = wp_remote_retrieve_response_code($response);
+    $body = wp_remote_retrieve_body($response);
+
+    if ($status_code !== 200 && $status_code !== 201 && $status_code !== 204) {
+        wp_send_json_error('API request failed with status ' . $status_code, $status_code);
+        return;
+    }
+
+    wp_send_json_success(array('message' => 'Successfully unsubscribed from activity'));
 }
 ?>

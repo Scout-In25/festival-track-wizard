@@ -4,6 +4,7 @@
  */
 import React from 'react';
 import { useDataContext } from '../contexts/DataProvider.jsx';
+import { useToast } from '../hooks/useToast';
 
 const TrackList = () => {
   const { 
@@ -12,14 +13,15 @@ const TrackList = () => {
     tracksError: error, 
     subscribeToTrack 
   } = useDataContext();
+  const { showInfo, showError } = useToast();
 
   const handleSubscribe = async (trackId, username = 'current_user') => {
     const result = await subscribeToTrack(trackId, username);
     
     if (result.success) {
-      alert('Successfully subscribed to track!');
+      showInfo('Successfully subscribed to track!');
     } else {
-      alert(`Failed to subscribe: ${result.error}`);
+      showError(`Failed to subscribe: ${result.error}`);
     }
   };
 

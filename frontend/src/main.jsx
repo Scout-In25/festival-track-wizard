@@ -4,6 +4,7 @@ import Wizard from './Wizard.jsx';
 import TrackPage from './TrackPage.jsx';
 import ActivitiesListPage from './ActivitiesListPage.jsx';
 import { DataProvider } from './contexts/DataProvider.jsx';
+import { ToastProvider } from './contexts/ToastProvider.jsx';
 
 if (import.meta.env.DEV) {
   import('./dev-only.css');
@@ -80,9 +81,11 @@ function App() {
 
   return (
     <React.StrictMode>
-      <DataProvider>
-        <ComponentToRender class="FTW" />
-      </DataProvider>
+      <ToastProvider>
+        <DataProvider>
+          <ComponentToRender class="FTW" />
+        </DataProvider>
+      </ToastProvider>
     </React.StrictMode>
   );
 }

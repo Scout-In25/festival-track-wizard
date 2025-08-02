@@ -5,7 +5,7 @@
  */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { dataService } from '../services/dataService.js';
-import { tracksService } from '../services/index.js';
+import { tracksService, activitiesService } from '../services/index.js';
 
 const DataContext = createContext();
 
@@ -193,6 +193,32 @@ export const DataProvider = ({ children }) => {
     }
   }, [fetchTracks]);
 
+  // Subscribe to activity (with refresh)
+  const subscribeToActivity = useCallback(async (activityId, username) => {
+    try {
+      await activitiesService.subscribe(username, activityId);
+      // Refresh user profile to update subscribed activities
+      await fetchUserProfile(true);
+      return { success: true };
+    } catch (error) {
+      console.error('DataProvider: Failed to subscribe to activity:', error);
+      return { success: false, error: error.message };
+    }
+  }, [fetchUserProfile]);
+
+  // Unsubscribe from activity (with refresh)
+  const unsubscribeFromActivity = useCallback(async (activityId, username) => {
+    try {
+      await activitiesService.unsubscribe(username, activityId);
+      // Refresh user profile to update subscribed activities
+      await fetchUserProfile(true);
+      return { success: true };
+    } catch (error) {
+      console.error('DataProvider: Failed to unsubscribe from activity:', error);
+      return { success: false, error: error.message };
+    }
+  }, [fetchUserProfile]);
+
   // Initialize data on mount
   useEffect(() => {
     console.log('DataProvider: Initializing...');
@@ -226,6 +252,8 @@ export const DataProvider = ({ children }) => {
     activitiesLoading,
     activitiesError,
     fetchActivities,
+    subscribeToActivity,
+    unsubscribeFromActivity,
 
     // Tracks
     tracks,

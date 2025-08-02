@@ -135,6 +135,23 @@ npm run dev
 # Open http://localhost:5173
 ```
 
+### Testing Different Views
+
+Access these URLs in your local development environment:
+
+| View | URL | Description |
+|------|-----|-------------|
+| **Wizard** | `http://localhost:5173/#wizard` | Interactive track wizard (default) |
+| **Simple List** | `http://localhost:5173/#simple` | Public activity list |
+| **Calendar** | `http://localhost:5173/#kalender` | Calendar view of activities |
+
+### Development Tips
+
+- **Mock Data**: Leave `VITE_API_KEY` empty to use mock data
+- **Live API**: Set `VITE_API_KEY` for real Scout-In25 data
+- **Hot Reload**: Changes auto-refresh in development mode
+- **Debug Mode**: Set `VITE_DEBUG=true` for API logging
+
 ### Project Structure
 
 ```
@@ -165,12 +182,6 @@ npm test            # Run unit tests
 npm run test:e2e    # Run Playwright E2E tests
 npm run preview     # Preview production build
 ```
-
-### Development Modes
-
-- **Real API Mode**: Set `VITE_API_KEY` to test with live Scout-In25 API
-- **Mock Mode**: Leave `VITE_API_KEY` empty to use mock data
-- **WordPress Mode**: Test full integration with local WordPress
 
 ## API Integration
 

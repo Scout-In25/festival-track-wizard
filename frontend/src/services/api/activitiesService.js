@@ -46,6 +46,26 @@ class ActivitiesService extends BaseApiService {
   async update(activityId, activityData) {
     return apiRequest('put', `/activities/${activityId}`, activityData);
   }
+
+  /**
+   * Subscribe to an activity
+   * @param {string} username - User's username
+   * @param {string} activityId - Activity UUID
+   * @returns {Promise} API response
+   */
+  async subscribe(username, activityId) {
+    return dataService.subscribeToActivity(username, activityId);
+  }
+
+  /**
+   * Unsubscribe from an activity
+   * @param {string} username - User's username
+   * @param {string} activityId - Activity UUID
+   * @returns {Promise} API response
+   */
+  async unsubscribe(username, activityId) {
+    return dataService.unsubscribeFromActivity(username, activityId);
+  }
 }
 
 // Export singleton instance

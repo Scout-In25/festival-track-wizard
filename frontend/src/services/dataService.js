@@ -72,8 +72,10 @@ class DataService {
         
         // Create WordPress user data for consistency with WordPress environment
         const wordpressUserData = {
-          username: import.meta.env.VITE_USERNAME,
+          username: participantResponse.data.username || import.meta.env.VITE_USERNAME,
           email: participantResponse.data.email || '',
+          first_name: participantResponse.data.firstname || '',
+          last_name: participantResponse.data.surname || '',
           display_name: `${participantResponse.data.firstname} ${participantResponse.data.surname}`
         };
         
@@ -137,6 +139,44 @@ class DataService {
 
     // External API - assume logged in if we have API key
     return !!window.FestivalWizardData?.apiKey || !!import.meta.env.VITE_API_KEY;
+  }
+
+  /**
+   * Subscribe to an activity
+   * @param {string} username - User's username
+   * @param {string} activityId - Activity UUID
+   * @returns {Promise} API response
+   */
+  async subscribeToActivity(username, activityId) {
+    // WordPress environment
+    if (this.isWordPressEnvironment()) {
+      return { data: await this.wordpressAjaxRequest('festival_activities_subscribe', { 
+        username, 
+        activity_id: activityId 
+      }) };
+    }
+
+    // Development or external API
+    return apiRequest('put', `/activities/subscribe/${username}/${activityId}`);
+  }
+
+  /**
+   * Unsubscribe from an activity
+   * @param {string} username - User's username
+   * @param {string} activityId - Activity UUID
+   * @returns {Promise} API response
+   */
+  async unsubscribeFromActivity(username, activityId) {
+    // WordPress environment
+    if (this.isWordPressEnvironment()) {
+      return { data: await this.wordpressAjaxRequest('festival_activities_unsubscribe', { 
+        username, 
+        activity_id: activityId 
+      }) };
+    }
+
+    // Development or external API
+    return apiRequest('put', `/activities/unsubscribe/${username}/${activityId}`);
   }
 }
 
