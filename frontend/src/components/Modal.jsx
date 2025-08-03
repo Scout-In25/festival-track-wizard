@@ -14,11 +14,16 @@ const Modal = ({
   const modalRef = useRef(null);
   const previousActiveElement = useRef(null);
   const isClosingRef = useRef(false);
+  const originalBodyOverflow = useRef(null);
 
   // Store the previously focused element when modal opens
   useEffect(() => {
     if (isOpen) {
       previousActiveElement.current = document.activeElement;
+      
+      // Store original body overflow style
+      originalBodyOverflow.current = document.body.style.overflow || '';
+      
       // Prevent body scroll
       document.body.style.overflow = 'hidden';
       
@@ -31,8 +36,8 @@ const Modal = ({
       
       return () => clearTimeout(timer);
     } else {
-      // Restore body scroll
-      document.body.style.overflow = '';
+      // Restore body scroll - use stored original value or empty string
+      document.body.style.overflow = originalBodyOverflow.current || '';
       
       // Return focus to previously focused element if not closing programmatically
       if (!isClosingRef.current && previousActiveElement.current) {
@@ -42,10 +47,33 @@ const Modal = ({
     }
   }, [isOpen]);
 
+  // Cleanup effect: ensure body overflow is restored on unmount
+  useEffect(() => {
+    return () => {
+      // Force restore body overflow when component unmounts
+      if (originalBodyOverflow.current !== null) {
+        document.body.style.overflow = originalBodyOverflow.current;
+      } else {
+        // Fallback: remove any overflow styling
+        document.body.style.overflow = '';
+      }
+    };
+  }, []);
+
+  // Utility function to ensure body overflow is restored
+  const ensureBodyOverflowRestored = useCallback(() => {
+    if (originalBodyOverflow.current !== null) {
+      document.body.style.overflow = originalBodyOverflow.current;
+    } else {
+      document.body.style.overflow = '';
+    }
+  }, []);
+
   // Handle ESC key
   const handleKeyDown = useCallback((event) => {
     if (event.key === 'Escape') {
       event.preventDefault();
+      ensureBodyOverflowRestored();
       onClose();
     }
     
@@ -74,7 +102,7 @@ const Modal = ({
         }
       }
     }
-  }, [onClose]);
+  }, [onClose, ensureBodyOverflowRestored]);
 
   // Add/remove event listeners
   useEffect(() => {
@@ -87,6 +115,7 @@ const Modal = ({
   // Handle backdrop click
   const handleBackdropClick = (event) => {
     if (event.target === event.currentTarget) {
+      ensureBodyOverflowRestored();
       onClose();
     }
   };
@@ -94,6 +123,7 @@ const Modal = ({
   // Programmatic close (for animations)
   const handleClose = () => {
     isClosingRef.current = true;
+    ensureBodyOverflowRestored();
     onClose();
   };
 

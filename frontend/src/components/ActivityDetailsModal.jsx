@@ -309,7 +309,7 @@ const ActivityDetailsModal = ({
                         </div>
                         
                         {/* Check if slot is unavailable (full or has conflicts) and user is not subscribed */}
-                        {((slot.status === 'full' || slot.hasConflict) && !slot.isSubscribed) ? (
+                        {((slot.status === 'full' || slot.status === 'conflict' || slot.hasConflict) && !slot.isSubscribed) ? (
                           <div
                             style={{
                               display: 'flex',
@@ -324,7 +324,7 @@ const ActivityDetailsModal = ({
                             }}
                           >
                             <BlockIcon />
-                            {slot.status === 'full' ? 'Vol' : 'Conflict'}
+                            {slot.status === 'full' ? 'Vol' : slot.status === 'conflict' || slot.hasConflict ? 'Conflict' : 'Niet beschikbaar'}
                           </div>
                         ) : (
                           <button

@@ -38,6 +38,7 @@ const StatusIndicator = ({ status }) => {
     switch (status) {
       case 'subscribed': return '#28a745';
       case 'full': return '#dc3545';
+      case 'conflict': return '#ff8c00';
       default: return '#6c757d';
     }
   };
@@ -46,6 +47,7 @@ const StatusIndicator = ({ status }) => {
     switch (status) {
       case 'subscribed': return 'Aangemeld';
       case 'full': return 'Vol';
+      case 'conflict': return 'Tijdconflict';
       default: return 'Niet aangemeld';
     }
   };
@@ -435,6 +437,11 @@ const ActivitiesListPage = () => {
       return 'full';
     }
     
+    // Check for time conflicts with user's subscribed activities
+    if (isUserLoggedIn && getConflictingActivities(activity).length > 0) {
+      return 'conflict';
+    }
+    
     return 'available';
   };
 
@@ -643,7 +650,9 @@ const ActivitiesListPage = () => {
               ? 'Mijn Schema' 
               : showEligibleOnly 
                 ? 'Beschikbaar'
-                : 'Volledig'
+                : isSimpleView 
+                  ? 'Uniek'
+                  : 'Volledig'
             }
           </h2>
         </div>
@@ -701,22 +710,24 @@ const ActivitiesListPage = () => {
         Object.entries(groupedActivities).map(([dayKey, dayActivities]) => (
           <div key={dayKey} className="day-section">
             <h2>{formatDate(dayKey)}</h2>
-            <ul className="activities-list">
+            <ul className="simple-activities-list">
               {dayActivities.map(activity => (
-                <li key={activity.id} className="activity-item">
+                <li key={activity.id} className="simple-activity-item">
                   <div 
-                    className="activity-header"
+                    className="simple-activity-header"
                     onClick={() => handleActivityClick(activity.id)}
                   >
-                    <span className="activity-time">
-                      {formatTime(activity.start_time)} - {formatTime(activity.end_time)}
-                    </span>
-                    <span className="activity-title">{activity.name}</span>
+                    {activity.start_time && activity.end_time && (
+                      <span className="activity-time" style={{ color: '#6c757d', fontSize: '0.9rem', fontWeight: '400', minWidth: '75px', marginRight: '8px', display: 'inline-block' }}>
+                        {formatTime(activity.start_time)}-{formatTime(activity.end_time)}
+                      </span>
+                    )}
+                    <span className="simple-activity-title" style={{ fontWeight: 'normal' }}>{activity.name}</span>
                     {activity.location && (
-                      <span className="activity-location">@ {activity.location}</span>
+                      <span className="simple-activity-location">@ {activity.location}</span>
                     )}
                     {activity.type && (
-                      <span className="activity-type">({activity.type})</span>
+                      <span className="simple-activity-type">({activity.type})</span>
                     )}
                     {isUserLoggedIn && <StatusIndicator status={getActivityStatus(activity)} />}
                     <span className="expand-indicator">

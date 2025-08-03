@@ -11,9 +11,73 @@ const TrackList = () => {
     tracks, 
     tracksLoading: loading, 
     tracksError: error, 
-    subscribeToTrack 
+    subscribeToTrack,
+    participant,
+    activities,
+    isUserLoggedIn
   } = useDataContext();
   const { showInfo, showError } = useToast();
+
+  // Time overlap utility function (from ActivitiesListPage)
+  const hasTimeOverlap = (item1, item2) => {
+    const start1 = new Date(item1.start_time);
+    const end1 = new Date(item1.end_time);
+    const start2 = new Date(item2.start_time);
+    const end2 = new Date(item2.end_time);
+    return start1 < end2 && start2 < end1;
+  };
+
+  // Get user's subscribed activities
+  const getSubscribedActivities = () => {
+    if (!participant?.activities || !activities.length) return [];
+    return activities.filter(activity => participant.activities.includes(activity.id));
+  };
+
+  // Check if track conflicts with user's subscribed activities or current track
+  const hasTrackConflict = (track) => {
+    if (!isUserLoggedIn || !participant) {
+      return false;
+    }
+    
+    // If tracks don't have timing information, they can't have time-based conflicts
+    if (!track.start_time || !track.end_time) {
+      return false;
+    }
+    
+    const subscribedActivities = getSubscribedActivities();
+    
+    // Check conflict with subscribed activities
+    const hasActivityConflict = subscribedActivities.some(activity => {
+      return hasTimeOverlap(track, activity);
+    });
+    
+    // Check conflict with current track (if user has one and it has timing)
+    const hasCurrentTrackConflict = participant.track && 
+      participant.track.id !== track.id && 
+      participant.track.start_time && 
+      participant.track.end_time &&
+      hasTimeOverlap(track, participant.track);
+    
+    return hasActivityConflict || hasCurrentTrackConflict;
+  };
+
+  // Get track status including conflict detection
+  const getTrackStatus = (track) => {
+
+    // Check if track is full first
+    if (track.current_participants >= track.max_participants) {
+      return 'full';
+    }
+    
+    // Check for time conflicts
+    const hasConflict = hasTrackConflict(track);
+    
+    if (hasConflict) {
+      return 'conflict';
+    }
+    
+    return 'available';
+  };
 
   const handleSubscribe = async (trackId, username = 'current_user') => {
     const result = await subscribeToTrack(trackId, username);
@@ -62,22 +126,38 @@ const TrackList = () => {
                 <div>
                   <strong>Participants:</strong> {track.current_participants}/{track.max_participants}
                 </div>
-                <div>
-                  <strong>Time:</strong> {new Date(track.start_time).toLocaleString()} - {new Date(track.end_time).toLocaleString()}
-                </div>
+                {track.start_time && track.end_time && (
+                  <div>
+                    <strong>Time:</strong> {new Date(track.start_time).toLocaleString()} - {new Date(track.end_time).toLocaleString()}
+                  </div>
+                )}
               </div>
 
               <div className="mt-4">
                 <button
                   onClick={() => handleSubscribe(track.id)}
-                  disabled={track.current_participants >= track.max_participants}
+                  disabled={getTrackStatus(track) === 'full'}
                   className={`w-full px-4 py-2 rounded font-medium ${
-                    track.current_participants >= track.max_participants
+                    getTrackStatus(track) === 'full'
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : getTrackStatus(track) === 'conflict'
+                      ? 'bg-orange-500 text-white hover:bg-orange-600 border-2 border-orange-400'
                       : 'bg-blue-600 text-white hover:bg-blue-700'
                   }`}
+                  title={
+                    getTrackStatus(track) === 'conflict' 
+                      ? 'Time conflict with your schedule'
+                      : getTrackStatus(track) === 'full'
+                      ? 'Track is full'
+                      : 'Subscribe to this track'
+                  }
                 >
-                  {track.current_participants >= track.max_participants ? 'Full' : 'Subscribe'}
+                  {getTrackStatus(track) === 'full' 
+                    ? 'Full' 
+                    : getTrackStatus(track) === 'conflict'
+                    ? '⚠️ Time Conflict'
+                    : 'Subscribe'
+                  }
                 </button>
               </div>
             </div>
