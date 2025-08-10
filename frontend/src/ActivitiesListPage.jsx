@@ -147,8 +147,9 @@ const ActivitiesListPage = () => {
   const [showEligibleOnly, setShowEligibleOnly] = useState(false);
   const [showMyScheduleOnly, setShowMyScheduleOnly] = useState(false);
   const [subscribingActivities, setSubscribingActivities] = useState({});
+  const [selectedTrackId, setSelectedTrackId] = useState('');
   
-  const { participant, wordpressUser, isUserLoggedIn, subscribeToActivity, unsubscribeFromActivity } = useDataContext();
+  const { participant, wordpressUser, isUserLoggedIn, subscribeToActivity, unsubscribeFromActivity, tracks, tracksLoading, tracksError } = useDataContext();
   const { showInfo, showError } = useToast();
 
   useEffect(() => {
@@ -528,6 +529,21 @@ const ActivitiesListPage = () => {
     return activitiesList.filter(activity => isUserSubscribed(activity.id));
   };
 
+  // Apply track filter to show only activities from selected track
+  const applyTrackFilter = (activitiesList) => {
+    if (!selectedTrackId) return activitiesList;
+    
+    // Find the selected track
+    const selectedTrack = tracks.find(track => track.id === selectedTrackId);
+    if (!selectedTrack || !selectedTrack.activities) return activitiesList;
+    
+    // Filter activities that match the track's activity numbers
+    return activitiesList.filter(activity => {
+      // Match using the 'number' field (e.g., "W36", "S12")
+      return activity.number && selectedTrack.activities.includes(activity.number);
+    });
+  };
+
   const handleSubscribeToggle = async (activityId) => {
     if (!isUserLoggedIn) {
       showError('Je moet ingelogd zijn om je aan te melden voor activiteiten');
@@ -578,10 +594,17 @@ const ActivitiesListPage = () => {
   const renderSimpleList = (activitiesList) => {
     // Process activities for simple view: deduplicate by title and sort alphabetically
     const validActivities = validateActivities(activitiesList);
-    let filteredActivities = applyEligibilityFilter(validActivities);
+    // Apply track filter first as base filter
+    let filteredActivities = applyTrackFilter(validActivities);
+    // Then apply other filters on top
+    filteredActivities = applyEligibilityFilter(filteredActivities);
     filteredActivities = applyScheduleFilter(filteredActivities);
     const uniqueActivities = deduplicateByTitleOnly(filteredActivities);
     const sortedActivities = sortActivitiesAlphabetically(uniqueActivities);
+
+    if (sortedActivities.length === 0) {
+      return <h2 className="no-activities">Geen activiteiten</h2>;
+    }
 
     return (
       <ul className="simple-activities-list">
@@ -631,7 +654,10 @@ const ActivitiesListPage = () => {
   }
 
   // Apply filters before grouping for calendar view
-  let filteredActivities = applyEligibilityFilter(activities);
+  // Apply track filter first as base filter
+  let filteredActivities = applyTrackFilter(activities);
+  // Then apply other filters on top
+  filteredActivities = applyEligibilityFilter(filteredActivities);
   filteredActivities = applyScheduleFilter(filteredActivities);
   const groupedActivities = groupActivitiesByDay(filteredActivities);
 
@@ -644,20 +670,59 @@ const ActivitiesListPage = () => {
 
       {/* Combined Header with Title and Filters */}
       <div className="content-header">
-        <div className="content-status">
-          <h2 className="filter-status-title">
-            {showMyScheduleOnly 
-              ? 'Mijn Schema' 
-              : showEligibleOnly 
-                ? 'Beschikbaar'
-                : isSimpleView 
-                  ? 'Uniek'
-                  : 'Volledig'
-            }
-          </h2>
+        <h2>Filters</h2>
+
+        <div className="filters-container" role="group" aria-label="Filter activiteiten">
+{/* Track Filter - Top Row */}
+          {tracks && tracks.length > 0 && (
+            <div className="track-filter" style={{ marginBottom: '12px' }}>
+              <label htmlFor="track-dropdown" style={{ 
+                fontSize: '0.9rem', 
+                fontWeight: '500', 
+                color: '#2d3748', 
+                marginRight: '8px',
+                display: 'inline-block',
+                marginBottom: '4px',
+                marginRight: '12px'
+              }}>
+              <strong>Track:</strong>
+              </label>
+              <select 
+                id="track-dropdown"
+                value={selectedTrackId}
+                onChange={(e) => {
+                  setSelectedTrackId(e.target.value);
+                  // Track filter can now be combined with other filters
+                  // No need to reset other filters
+                }}
+                style={{
+                  display: 'inline-block',
+                  fontSize: '0.9rem',
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid #d1d5db',
+                  backgroundColor: '#fff',
+                  color: '#374151',
+                  cursor: 'pointer',
+                  minWidth: '120px',
+                  marginRight: '12px'
+                }}
+                aria-label="Selecteer een track om activiteiten te filteren"
+              >
+                <option value="">Alle tracks</option>
+                {tracks.map(track => (
+                  <option key={track.id} value={track.id}>
+                    {track.title || track.name || track.description || `Track ${track.id}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
         
         <div className="filters-container" role="group" aria-label="Filter activiteiten">
+          
+
           <div className="filter-toggles">
             {/* My Schedule Filter */}
             {isUserLoggedIn && (
@@ -666,7 +731,7 @@ const ActivitiesListPage = () => {
                 checked={showMyScheduleOnly}
                 onChange={(checked) => {
                   setShowMyScheduleOnly(checked);
-                  // Disable other filters when showing schedule
+                  // Disable eligibility filter when showing schedule, but keep track filter
                   if (checked) {
                     setShowEligibleOnly(false);
                   }
@@ -696,16 +761,29 @@ const ActivitiesListPage = () => {
         </div>
       </div>
 
+<div className="content-status">
+          <h2 className="filter-status-title">
+            {showMyScheduleOnly 
+              ? 'Mijn Schema' 
+              : showEligibleOnly 
+                ? 'Beschikbare activiteiten'
+                : isSimpleView 
+                  ? 'Activiteiten uniek'
+                  : 'Activiteiten volledig'
+            }
+          </h2>
+        </div>
+
       {/* Content based on view mode */}
       {isSimpleView ? (
         activities.length === 0 ? (
-          <p>Geen activiteiten gevonden.</p>
+          <h2 className="no-activities">Geen activiteiten</h2>
         ) : (
           renderSimpleList(activities)
         )
       ) : (
         Object.keys(groupedActivities).length === 0 ? (
-          <p>Geen activiteiten gevonden.</p>
+          <h2 className="no-activities">Geen activiteiten</h2>
         ) : (
         Object.entries(groupedActivities).map(([dayKey, dayActivities]) => (
           <div key={dayKey} className="day-section">

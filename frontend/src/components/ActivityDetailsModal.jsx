@@ -326,7 +326,7 @@ const ActivityDetailsModal = ({
                             <BlockIcon />
                             {slot.status === 'full' ? 'Vol' : slot.status === 'conflict' || slot.hasConflict ? 'Conflict' : 'Niet beschikbaar'}
                           </div>
-                        ) : (
+                        ) : isUserLoggedIn ? (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -375,7 +375,7 @@ const ActivityDetailsModal = ({
                               <PlusIcon />
                             )}
                           </button>
-                        )}
+                        ) : null}
                       </div>
                     );
                   })}

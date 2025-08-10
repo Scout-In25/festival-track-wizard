@@ -45,7 +45,10 @@ export const getApiBaseUrl = () => {
   // In production, use WordPress data
   // Important: In production, activitiesService will use WordPress AJAX instead
   const apiBaseUrl = window.FestivalWizardData?.apiBaseUrl;
-  return apiBaseUrl || 'https://si25.timoklabbers.nl';
+  if (!apiBaseUrl) {
+    throw new Error('API base URL not configured. Please contact an administrator.');
+  }
+  return apiBaseUrl;
 };
 
 /**

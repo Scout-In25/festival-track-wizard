@@ -135,13 +135,13 @@ class DataService {
       return wordpressService.isUserLoggedIn();
     }
 
-    // Development mode with username configured
-    if (import.meta.env.DEV && import.meta.env.VITE_USERNAME) {
-      return true;
+    // Development mode - only logged in if username is configured
+    if (import.meta.env.DEV) {
+      return !!import.meta.env.VITE_USERNAME;
     }
 
-    // External API - assume logged in if we have API key
-    return !!window.FestivalWizardData?.apiKey || !!import.meta.env.VITE_API_KEY;
+    // Production mode without WordPress - check for user data
+    return !!window.FestivalWizardData?.currentUser?.username;
   }
 
   /**

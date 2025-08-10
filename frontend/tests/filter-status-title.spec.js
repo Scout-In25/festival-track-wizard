@@ -14,7 +14,7 @@ test.describe('Filter Status Title Toggle', () => {
     
     const initialTitle = await statusTitle.textContent();
     console.log(`Initial filter status title: "${initialTitle}"`);
-    expect(initialTitle).toBe('Uniek');
+    expect(initialTitle).toBe('Activiteiten uniek');
     console.log('✅ Simple view shows "Uniek"');
 
     // Find and toggle the calendar view
@@ -27,7 +27,7 @@ test.describe('Filter Status Title Toggle', () => {
     // Check the title after switching to calendar view
     const calendarTitle = await statusTitle.textContent();
     console.log(`Calendar view filter status title: "${calendarTitle}"`);
-    expect(calendarTitle).toBe('Volledig');
+    expect(calendarTitle).toBe('Activiteiten volledig');
     console.log('✅ Calendar view shows "Volledig"');
 
     // Toggle back to simple view
@@ -37,7 +37,7 @@ test.describe('Filter Status Title Toggle', () => {
     // Check the title returns to "Uniek"
     const backToSimpleTitle = await statusTitle.textContent();
     console.log(`Back to simple view filter status title: "${backToSimpleTitle}"`);
-    expect(backToSimpleTitle).toBe('Uniek');
+    expect(backToSimpleTitle).toBe('Activiteiten uniek');
     console.log('✅ Back to simple view shows "Uniek" again');
 
     console.log('✅ Filter status title toggles correctly based on calendar view state');
@@ -59,7 +59,7 @@ test.describe('Filter Status Title Toggle', () => {
       
       const eligibleTitle = await statusTitle.textContent();
       console.log(`With "Alleen Beschikbaar" active: "${eligibleTitle}"`);
-      expect(eligibleTitle).toBe('Beschikbaar');
+      expect(eligibleTitle).toBe('Beschikbare activiteiten');
       console.log('✅ "Alleen Beschikbaar" filter overrides calendar state');
 
       // Turn off the filter
@@ -87,7 +87,7 @@ test.describe('Filter Status Title Toggle', () => {
     const finalTitle = await statusTitle.textContent();
     console.log(`Final state (should depend on calendar view): "${finalTitle}"`);
     // Should be either "Uniek" (simple view) or "Volledig" (calendar view)
-    expect(['Uniek', 'Volledig']).toContain(finalTitle);
+    expect(['Activiteiten uniek', 'Activiteiten volledig']).toContain(finalTitle);
     console.log('✅ Returns to calendar-based title after other filters are off');
   });
 
@@ -106,14 +106,14 @@ test.describe('Filter Status Title Toggle', () => {
       
       // Start in simple view
       let currentTitle = await statusTitle.textContent();
-      if (currentTitle !== 'Uniek') {
+      if (currentTitle !== 'Activiteiten uniek') {
         await calendarToggle.locator('.toggle-switch').click();
         await page.waitForTimeout(200);
       }
       
       currentTitle = await statusTitle.textContent();
       console.log(`Simple view: "${currentTitle}"`);
-      expect(currentTitle).toBe('Uniek');
+      expect(currentTitle).toBe('Activiteiten uniek');
       
       // Switch to calendar view
       await calendarToggle.locator('.toggle-switch').click();
@@ -121,7 +121,7 @@ test.describe('Filter Status Title Toggle', () => {
       
       currentTitle = await statusTitle.textContent();
       console.log(`Calendar view: "${currentTitle}"`);
-      expect(currentTitle).toBe('Volledig');
+      expect(currentTitle).toBe('Activiteiten volledig');
     }
 
     console.log('✅ Title changes respond immediately to toggles');

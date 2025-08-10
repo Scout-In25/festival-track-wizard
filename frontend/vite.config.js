@@ -23,7 +23,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://si25.timoklabbers.nl',
+        target: `https://${process.env.VITE_API_BASE_URL || 'trackapi.catriox.nl'}`,
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path.replace(/^\/api/, ''),

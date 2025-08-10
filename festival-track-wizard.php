@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Festival Track Wizard
  * Description: A personalized festival tracking wizard.
- * Version: 1.34
+ * Version: 1.37
  * Author: D de Zeeuw / NEKO media
  */
 
@@ -11,18 +11,22 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Plugin activation hook to set default options
+register_activation_hook(__FILE__, 'festival_track_wizard_activate');
+function festival_track_wizard_activate() {
+    add_option('festival_track_wizard_api_base_url', 'https://trackapi.catriox.nl');
+}
+
 add_shortcode('festival_track_wizard', function () {
-    if (is_user_logged_in()) {
-        $api_key = get_option('festival_track_wizard_api_key', '');
-        if (empty($api_key) && current_user_can('manage_options')) {
-            return '<div class="notice notice-warning"><p>Festival Track Wizard: API key not configured. <a href="' . admin_url('options-general.php?page=festival-track-wizard-settings') . '">Configure it here</a>.</p></div>';
-        } elseif (empty($api_key)) {
-            return '<p>Festival Track Wizard is currently being configured. Please try again later.</p>';
-        }
-        return '<div id="festival-track-wizard-root"></div>';
-    } else {
-        return '<p>Log in of <a href="https://test-scout-in.scouting.nl/scouts-online-login/">creëer een account</a> om je eigen track te maken voor Scout-in 25!</p>';
+    $api_key = get_option('festival_track_wizard_api_key', '');
+    if (empty($api_key) && current_user_can('manage_options')) {
+        return '<div class="notice notice-warning"><p>Festival Track Wizard: API key not configured. <a href="' . admin_url('options-general.php?page=festival-track-wizard-settings') . '">Configure it here</a>.</p></div>';
+    } elseif (empty($api_key)) {
+        return '<p>Festival Track Wizard is currently being configured. Please try again later.</p>';
     }
+    
+    // Festival track wizard renders simple mode but respects login status
+    return '<div id="festival-track-wizard-root" data-display-mode="wizard-simple"></div>';
 });
 
 add_shortcode('festival_track_simple', function () {
@@ -32,7 +36,9 @@ add_shortcode('festival_track_simple', function () {
     } elseif (empty($api_key)) {
         return '<p>Festival Track Wizard is currently being configured. Please try again later.</p>';
     }
-    return '<div id="festival-track-wizard-root" data-simple-mode="true"></div>';
+    
+    // Festival track simple always shows as logged-out (read-only mode)
+    return '<div id="festival-track-wizard-root" data-display-mode="simple-readonly"></div>';
 });
 
 add_action('wp_enqueue_scripts', 'festival_track_wizard_enqueue_assets');
@@ -40,14 +46,11 @@ function festival_track_wizard_enqueue_assets() {
     global $post;
     if (!is_a($post, 'WP_Post')) return;
 
-    $has_full_shortcode = has_shortcode($post->post_content, 'festival_track_wizard');
+    $has_wizard_shortcode = has_shortcode($post->post_content, 'festival_track_wizard');
     $has_simple_shortcode = has_shortcode($post->post_content, 'festival_track_simple');
     
-    // For full shortcode, require login
-    if ($has_full_shortcode && !is_user_logged_in()) return;
-    
-    // Load assets if either shortcode is present
-    if ($has_full_shortcode || $has_simple_shortcode) {
+    // Load assets if either shortcode is present (no login requirement for loading assets)
+    if ($has_wizard_shortcode || $has_simple_shortcode) {
         $api_key = get_option('festival_track_wizard_api_key', '');
         
         wp_enqueue_script(
@@ -65,28 +68,39 @@ function festival_track_wizard_enqueue_assets() {
             filemtime(plugin_dir_path(__FILE__) . 'build/style.css')
         );
 
-        // Detect if simple mode is being used
-        $show_tracks_only = has_shortcode($post->post_content, 'festival_track_simple');
+        // Determine display mode
+        $display_mode = 'full'; // default
+        if ($has_simple_shortcode) {
+            $display_mode = 'simple-readonly'; // Always shows as logged-out
+        } else if ($has_wizard_shortcode) {
+            $display_mode = 'wizard-simple'; // Simple list but respects login status
+        }
 
         $current_user = wp_get_current_user();
-        $user_data = array(
-            'username' => $current_user->user_login,
-            'email' => $current_user->user_email,
-            'firstName' => $current_user->first_name,
-            'lastName' => $current_user->last_name,
-            'displayName' => $current_user->display_name,
-            'ticket_type' => get_user_meta($current_user->ID, 'festival_ticket_type', true) ?: 'standard',
-        );
+        $user_data = null;
+        
+        // Only include user data if user is logged in AND not in simple-readonly mode
+        if (is_user_logged_in() && $display_mode !== 'simple-readonly') {
+            $user_data = array(
+                'username' => $current_user->user_login,
+                'email' => $current_user->user_email,
+                'firstName' => $current_user->first_name,
+                'lastName' => $current_user->last_name,
+                'displayName' => $current_user->display_name,
+                'ticket_type' => get_user_meta($current_user->ID, 'festival_ticket_type', true) ?: 'standard',
+            );
+        }
         
         wp_localize_script('festival-track-wizard', 'FestivalWizardData', [
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('festival_track_wizard_nonce'),
+            'isLoggedIn' => is_user_logged_in() && $display_mode !== 'simple-readonly',
             'currentUser' => $user_data,
             'apiKey' => $api_key,
-            'apiBaseUrl' => get_option('festival_track_wizard_api_base_url', 'https://si25.timoklabbers.nl'),
-            'showTracksOnly' => $show_tracks_only,
+            'apiBaseUrl' => get_option('festival_track_wizard_api_base_url', 'https://trackapi.catriox.nl'),
+            'displayMode' => $display_mode,
             'activitiesTitle' => get_option('festival_track_wizard_activities_title', 'Festival Activiteiten'),
-            'activitiesIntro' => get_option('festival_track_wizard_activities_intro', 'Hier vind je alle activiteiten van Scout-in. Je kunt de activiteiten bekijken en beheren in deze lijst.'),
+            'activitiesIntro' => get_option('festival_track_wizard_activities_intro', 'Hier vind je alle activiteiten van Scout-In. Je kunt de activiteiten bekijken en beheren in deze lijst.'),
         ]);
     }
 }
@@ -122,9 +136,9 @@ function festival_track_wizard_settings_page() {
     }
     
     $api_key = get_option('festival_track_wizard_api_key', '');
-    $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://si25.timoklabbers.nl');
+    $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://trackapi.catriox.nl');
     $activities_title = get_option('festival_track_wizard_activities_title', 'Festival Activiteiten');
-    $activities_intro = get_option('festival_track_wizard_activities_intro', 'Hier vind je alle activiteiten van Scout-in. Je kunt de activiteiten bekijken en beheren in deze lijst.');
+    $activities_intro = get_option('festival_track_wizard_activities_intro', 'Hier vind je alle activiteiten van Scout-In. Je kunt de activiteiten bekijken en beheren in deze lijst.');
     ?>
     <div class="wrap">
         <h1>Festival Track Wizard Settings</h1>
@@ -160,7 +174,7 @@ function festival_track_wizard_settings_page() {
                             name="festival_track_wizard_api_base_url" 
                             value="<?php echo esc_attr($api_base_url); ?>" 
                             class="regular-text"
-                            placeholder="https://si25.timoklabbers.nl"
+                            placeholder="<?php echo esc_attr(get_option('festival_track_wizard_api_base_url', 'https://trackapi.catriox.nl')); ?>"
                         />
                         <p class="description">
                             Enter the base URL for the Festival Track Wizard API (without trailing slash).
@@ -195,7 +209,7 @@ function festival_track_wizard_settings_page() {
                             name="festival_track_wizard_activities_intro" 
                             rows="3"
                             class="large-text"
-                            placeholder="Hier vind je alle activiteiten van Scout-in. Je kunt de activiteiten bekijken en beheren in deze lijst."
+                            placeholder="Hier vind je alle activiteiten van Scout-In. Je kunt de activiteiten bekijken en beheren in deze lijst."
                         ><?php echo esc_textarea($activities_intro); ?></textarea>
                         <p class="description">
                             Enter the introduction text to display below the title on the activities list page.
@@ -234,15 +248,15 @@ function festival_track_wizard_settings_page() {
                         <code style="display: inline-block; padding: 8px 12px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 3px; cursor: pointer;" onclick="navigator.clipboard.writeText('[festival_track_wizard]'); alert('Shortcode copied!');">[festival_track_wizard]</code>
                     </td>
                     <td>
-                        <strong>Full Festival Track Wizard</strong><br>
-                        Displays the complete festival track wizard interface with all features. This includes:
+                        <strong>Activities List with Login Features</strong><br>
+                        Displays the activities list in simple view mode. Features include:
                         <ul style="margin-top: 5px;">
-                            <li>• Interactive track selection and management</li>
-                            <li>• Activity details and descriptions</li>
-                            <li>• Personalized recommendations</li>
-                            <li>• Full user interface</li>
+                            <li>• Simple activities list view</li>
+                            <li>• Activity details in modal popup</li>
+                            <li>• For logged-in users: status indicators, subscription buttons, schedule management</li>
+                            <li>• For logged-out users: read-only view without interactive features</li>
                         </ul>
-                        <em>Note: Only available to logged-in users.</em>
+                        <em>Note: Adapts based on user login status.</em>
                     </td>
                 </tr>
                 <tr>
@@ -250,15 +264,15 @@ function festival_track_wizard_settings_page() {
                         <code style="display: inline-block; padding: 8px 12px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 3px; cursor: pointer;" onclick="navigator.clipboard.writeText('[festival_track_simple]'); alert('Shortcode copied!');">[festival_track_simple]</code>
                     </td>
                     <td>
-                        <strong>Simple Track List View</strong><br>
-                        Displays a simplified, read-only view of festival tracks. This includes:
+                        <strong>Read-Only Activities List</strong><br>
+                        Displays a read-only view of activities, always appearing as if user is logged out:
                         <ul style="margin-top: 5px;">
-                            <li>• List of available tracks</li>
-                            <li>• Basic track information</li>
-                            <li>• Simplified interface</li>
-                            <li>• No interactive features</li>
+                            <li>• Simple activities list view</li>
+                            <li>• Activity details in modal popup</li>
+                            <li>• No status indicators or subscription buttons</li>
+                            <li>• Safe for public/cached pages</li>
                         </ul>
-                        <em>Note: This view is publicly accessible (no login required).</em>
+                        <em>Note: Always shows as logged-out, regardless of actual login status.</em>
                     </td>
                 </tr>
             </tbody>
@@ -268,9 +282,10 @@ function festival_track_wizard_settings_page() {
             <h3 style="margin-top: 0;">Usage Instructions</h3>
             <ol>
                 <li>Copy the desired shortcode by clicking on it</li>
-                <li>Paste the shortcode into any WordPress page or post where you want the Festival Track Wizard to appear</li>
+                <li>Paste the shortcode into any WordPress page or post where you want the activities list to appear</li>
                 <li>Make sure you have configured the API key above for the shortcodes to work properly</li>
-                <li>The content will only be visible to logged-in users</li>
+                <li>Use <code>[festival_track_wizard]</code> for pages where users can interact with activities</li>
+                <li>Use <code>[festival_track_simple]</code> for public/cached pages where you want a read-only view</li>
             </ol>
         </div>
     </div>
@@ -296,7 +311,7 @@ function festival_track_wizard_activities_all() {
     }
 
     $api_key = get_option('festival_track_wizard_api_key', '');
-    $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://si25.timoklabbers.nl');
+    $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://trackapi.catriox.nl');
     
     if (empty($api_key)) {
         wp_send_json_error('API key not configured', 500);
@@ -351,7 +366,7 @@ function festival_track_wizard_activities_get() {
 
     $activity_id = sanitize_text_field($_POST['activity_id']);
     $api_key = get_option('festival_track_wizard_api_key', '');
-    $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://si25.timoklabbers.nl');
+    $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://trackapi.catriox.nl');
     
     if (empty($api_key)) {
         wp_send_json_error('API key not configured', 500);
@@ -407,7 +422,7 @@ function festival_track_wizard_participant_profile() {
     }
 
     $api_key = get_option('festival_track_wizard_api_key', '');
-    $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://si25.timoklabbers.nl');
+    $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://trackapi.catriox.nl');
     
     if (empty($api_key)) {
         wp_send_json_error('API key not configured', 500);
@@ -496,7 +511,7 @@ function festival_track_wizard_activities_subscribe() {
     $username = sanitize_text_field($_POST['username']);
     $activity_id = sanitize_text_field($_POST['activity_id']);
     $api_key = get_option('festival_track_wizard_api_key', '');
-    $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://si25.timoklabbers.nl');
+    $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://trackapi.catriox.nl');
     
     error_log('FESTIVAL: Username: ' . $username);
     error_log('FESTIVAL: Activity ID: ' . $activity_id);
@@ -566,7 +581,7 @@ function festival_track_wizard_activities_unsubscribe() {
     $username = sanitize_text_field($_POST['username']);
     $activity_id = sanitize_text_field($_POST['activity_id']);
     $api_key = get_option('festival_track_wizard_api_key', '');
-    $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://si25.timoklabbers.nl');
+    $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://trackapi.catriox.nl');
     
     if (empty($api_key)) {
         wp_send_json_error('API key not configured', 500);

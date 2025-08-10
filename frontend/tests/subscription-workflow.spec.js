@@ -385,7 +385,7 @@ test.describe('Subscription Workflow', () => {
     await expect(mijnSchemaToggle).not.toHaveClass(/checked/);
     
     // Verify header changed back to "Volledig"
-    await expect(page.locator('.filter-status-title')).toContainText('Volledig');
+    await expect(page.locator('.filter-status-title')).toContainText('Activiteiten volledig');
     
     // Verify all activities are shown again
     await expect(page.locator('.simple-activity-item')).toHaveCount(3);

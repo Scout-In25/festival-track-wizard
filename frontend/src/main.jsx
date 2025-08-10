@@ -15,41 +15,34 @@ import './index.css';
 import './styles.scss';
 
 function App() {
-  // Check if show_tracks_only is enabled
-  const getShowTracksOnly = React.useCallback(() => {
-    // Check for test override first (for E2E tests)
-    if (typeof window !== 'undefined' && window.FestivalWizardData && window.FestivalWizardData.hasOwnProperty('showTracksOnly')) {
-      return Boolean(window.FestivalWizardData.showTracksOnly);
+  // Get display mode from WordPress data
+  const getDisplayMode = React.useCallback(() => {
+    if (typeof window !== 'undefined' && window.FestivalWizardData && window.FestivalWizardData.displayMode) {
+      return window.FestivalWizardData.displayMode;
     }
-    // In development, check environment variable
-    if (import.meta.env.DEV && import.meta.env.VITE_SHOW_TRACKS_ONLY !== undefined) {
-      return import.meta.env.VITE_SHOW_TRACKS_ONLY === 'true';
+    // Fallback to old showTracksOnly logic for backward compatibility
+    if (typeof window !== 'undefined' && window.FestivalWizardData && window.FestivalWizardData.showTracksOnly) {
+      return 'simple-readonly';
     }
-    // In production, check WordPress setting
-    if (typeof window !== 'undefined' && window.FestivalWizardData) {
-      return Boolean(window.FestivalWizardData.showTracksOnly);
-    }
-    return false;
+    return 'full';
   }, []);
 
-  // Determine default page based on configuration and dev auth mode
+  // Determine default page based on display mode
   const getDefaultPage = React.useCallback(() => {
-    const showTracksOnly = getShowTracksOnly();
+    const displayMode = getDisplayMode();
     
-    if (showTracksOnly) {
+    // Both simple modes should show activities list
+    if (displayMode === 'wizard-simple' || displayMode === 'simple-readonly') {
       return 'activities-list';
     }
     
-    if (import.meta.env.DEV && import.meta.env.VITE_DEV_AUTH_MODE) {
-      const authMode = import.meta.env.VITE_DEV_AUTH_MODE;
-      if (authMode === 'not_logged_in') {
-        return 'track';
-      } else if (authMode === 'logged_in') {
-        return 'wizard';
-      }
+    // In development, default to activities-list as well (matching production behavior)
+    if (import.meta.env.DEV) {
+      return 'activities-list';
     }
-    return 'wizard'; // Default fallback
-  }, [getShowTracksOnly]);
+    
+    return 'activities-list'; // Default to activities list in all cases
+  }, [getDisplayMode]);
 
   const [currentPage, setCurrentPage] = React.useState(() => {
     return window.location.hash.substring(1) || getDefaultPage();

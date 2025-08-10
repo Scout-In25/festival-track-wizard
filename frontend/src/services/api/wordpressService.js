@@ -83,6 +83,11 @@ class WordPressService {
    * @returns {boolean} True if user data is available
    */
   isUserLoggedIn() {
+    // First check the explicit isLoggedIn flag if available
+    if (typeof window.FestivalWizardData?.isLoggedIn === 'boolean') {
+      return window.FestivalWizardData.isLoggedIn;
+    }
+    // Fallback to checking if user data exists
     const user = this.getCurrentUser();
     return !!(user && user.username);
   }

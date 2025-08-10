@@ -1,15 +1,32 @@
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import ActivitiesListPage from './ActivitiesListPage.jsx';
 import { activitiesService } from './services/api/activitiesService.js';
 
 // Mock the activities service
-vi.mock('./services/api/activitiesService.js', () => ({
-  activitiesService: {
+vi.mock('./services/api/activitiesService.js', () => {
+  const mockService = {
     getAll: vi.fn()
-  }
+  };
+  return {
+    activitiesService: mockService,
+    default: mockService
+  };
+});
+
+// Mock the contexts and hooks
+vi.mock('./contexts/DataProvider.jsx', () => ({
+  useDataContext: vi.fn()
 }));
+
+vi.mock('./hooks/useToast', () => ({
+  useToast: vi.fn()
+}));
+
+// Import the mocked hooks
+import { useDataContext } from './contexts/DataProvider.jsx';
+import { useToast } from './hooks/useToast';
 
 describe('ActivitiesListPage', () => {
   let consoleSpy;
@@ -18,6 +35,21 @@ describe('ActivitiesListPage', () => {
     vi.clearAllMocks();
     // Spy on console.info to capture validation statistics
     consoleSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+    
+    // Setup mock implementations
+    useDataContext.mockReturnValue({
+      participant: null,
+      wordpressUser: null,
+      isUserLoggedIn: false,
+      subscribeToActivity: vi.fn(),
+      unsubscribeFromActivity: vi.fn()
+    });
+    
+    useToast.mockReturnValue({
+      showInfo: vi.fn(),
+      showError: vi.fn(),
+      showSuccess: vi.fn()
+    });
   });
 
   afterEach(() => {
@@ -76,7 +108,7 @@ describe('ActivitiesListPage', () => {
     });
 
     // Check intro text
-    expect(screen.getByText(/Hier vind je alle activiteiten van scout-in/)).toBeInTheDocument();
+    expect(screen.getByText('Hier vind je alle activiteiten van Scout-in. Je kunt de activiteiten bekijken en beheren in deze lijst.')).toBeInTheDocument();
 
     // Check that activities are displayed in simple view (alphabetically sorted)
     expect(screen.getByText('Afternoon Session')).toBeInTheDocument();
@@ -94,10 +126,10 @@ describe('ActivitiesListPage', () => {
     expect(screen.getByText('(event)')).toBeInTheDocument();
 
     // Check that NO time information is shown in simple view
-    expect(screen.queryByText(/\d{2}:\d{2} - \d{2}:\d{2}/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\d{2}:\d{2}-\d{2}:\d{2}/)).not.toBeInTheDocument();
 
-    // Check that there are NO day headers in simple view
-    expect(screen.queryAllByRole('heading', { level: 2 })).toHaveLength(0);
+    // Check that there are NO day headers in simple view (but there are Filters and filter status headers)
+    expect(screen.queryAllByRole('heading', { level: 2 })).toHaveLength(2); // Filters + filter status headers
   });
 
   it('renders error state when API call fails', async () => {
@@ -123,7 +155,7 @@ describe('ActivitiesListPage', () => {
       expect(screen.getByText('Scout-in Activiteiten')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Geen activiteiten gevonden.')).toBeInTheDocument();
+    expect(screen.getByText('Geen activiteiten')).toBeInTheDocument();
   });
 
   it('sorts activities by start time correctly', async () => {
@@ -174,12 +206,12 @@ describe('ActivitiesListPage', () => {
     });
 
     // First click the toggle button to switch to detailed view
-    const toggleButton = screen.getByRole('button', { name: /Schakel naar gedetailleerde weergave/i });
+    const toggleButton = screen.getByRole('switch', { name: /Schakel tussen lijst en kalender weergave/i });
     fireEvent.click(toggleButton);
 
-    // Check that we have two different day sections by looking for h2 elements
+    // Check that we have day sections by looking for h2 elements (plus the filters and filter status)
     const dayHeaders = screen.getAllByRole('heading', { level: 2 });
-    expect(dayHeaders).toHaveLength(2); // Two different days
+    expect(dayHeaders).toHaveLength(4); // Filters + Filter status + Two different days
 
     // Check that activities are displayed
     expect(screen.getByText('Morning Workshop')).toBeInTheDocument();
@@ -206,13 +238,13 @@ describe('ActivitiesListPage', () => {
     });
 
     // Switch to detailed view
-    const toggleButton = screen.getByRole('button', { name: /Schakel naar gedetailleerde weergave/i });
+    const toggleButton = screen.getByRole('switch', { name: /Schakel tussen lijst en kalender weergave/i });
     fireEvent.click(toggleButton);
 
     // Check that time is formatted correctly (this will depend on timezone)
     const timeElement = document.querySelector('.activity-time');
     expect(timeElement).toBeInTheDocument();
-    expect(timeElement.textContent).toMatch(/\d{2}:\d{2} - \d{2}:\d{2}/);
+    expect(timeElement.textContent).toMatch(/\d{2}:\d{2}-\d{2}:\d{2}/);
   });
 
   it('filters out bad entries during activity loading', async () => {
@@ -297,7 +329,7 @@ describe('ActivitiesListPage', () => {
     });
 
     // Should show empty state since all activities were filtered out
-    expect(screen.getByText('Geen activiteiten gevonden.')).toBeInTheDocument();
+    expect(screen.getByText('Geen activiteiten')).toBeInTheDocument();
   });
 
   it('logs validation statistics when filtering activities', async () => {
@@ -342,11 +374,11 @@ describe('ActivitiesListPage', () => {
     });
 
     // Should start in simple view
-    expect(screen.queryByText(/\d{2}:\d{2} - \d{2}:\d{2}/)).not.toBeInTheDocument();
-    expect(screen.queryAllByRole('heading', { level: 2 })).toHaveLength(0);
+    expect(screen.queryByText(/\d{2}:\d{2}-\d{2}:\d{2}/)).not.toBeInTheDocument();
+    expect(screen.queryAllByRole('heading', { level: 2 })).toHaveLength(2); // Filters + Filter status headers
 
     // Click toggle to switch to detailed view
-    const toggleToDetailed = screen.getByRole('button', { name: /Schakel naar gedetailleerde weergave/i });
+    const toggleToDetailed = screen.getByRole('switch', { name: /Schakel tussen lijst en kalender weergave/i });
     fireEvent.click(toggleToDetailed);
 
     // Should now show detailed view with times and day headers
@@ -354,15 +386,15 @@ describe('ActivitiesListPage', () => {
       const timeElements = document.querySelectorAll('.activity-time');
       expect(timeElements.length).toBeGreaterThan(0);
     });
-    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(2); // Day headers
+    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(4); // Filters + Filter status + 2 day headers
 
     // Click toggle to switch back to simple view
-    const toggleToSimple = screen.getByRole('button', { name: /Schakel naar eenvoudige weergave/i });
+    const toggleToSimple = screen.getByRole('switch', { name: /Schakel tussen lijst en kalender weergave/i });
     fireEvent.click(toggleToSimple);
 
     // Should be back in simple view
-    expect(screen.queryByText(/\d{2}:\d{2} - \d{2}:\d{2}/)).not.toBeInTheDocument();
-    expect(screen.queryAllByRole('heading', { level: 2 })).toHaveLength(0);
+    expect(screen.queryByText(/\d{2}:\d{2}-\d{2}:\d{2}/)).not.toBeInTheDocument();
+    expect(screen.queryAllByRole('heading', { level: 2 })).toHaveLength(2); // Filters + Filter status headers
   });
 
   it('removes duplicates by title in simple view', async () => {
