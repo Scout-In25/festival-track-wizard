@@ -1119,3 +1119,48 @@
     margin-top: 2px;
   }
 }
+
+/* Reset Wizard Button Styles */
+.reset-wizard-container {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.reset-wizard-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.reset-wizard-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
+.reset-wizard-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.reset-wizard-button svg {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+@media (max-width: 768px) {
+  .reset-wizard-button {
+    font-size: 0.85rem;
+    padding: 6px 12px;
+  }
+}

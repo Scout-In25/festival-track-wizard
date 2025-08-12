@@ -5,7 +5,7 @@
  */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { dataService } from '../services/dataService.js';
-import { tracksService, activitiesService, suggestionsService } from '../services/index.js';
+import { tracksService, activitiesService, suggestionsService, labelsService } from '../services/index.js';
 
 const DataContext = createContext();
 
@@ -282,6 +282,26 @@ export const DataProvider = ({ children }) => {
     }
   }, [fetchUserProfile]);
 
+  // Clear user labels (reset wizard)
+  const clearUserLabels = useCallback(async (username) => {
+    try {
+      // Clear labels via API
+      await labelsService.clearLabels(username);
+      
+      // Clear suggestions from state
+      setSuggestions(null);
+      
+      // Force refresh user profile - this will trigger redirect to wizard
+      // since hasCompletedWizard will become false
+      await fetchUserProfile(true);
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to clear user labels:', error);
+      return { success: false, error: error.message };
+    }
+  }, [fetchUserProfile]);
+
   // Initialize data on mount (only once, even with StrictMode)
   useEffect(() => {
     // Skip if already initialized (handles React.StrictMode double-mount)
@@ -351,6 +371,9 @@ export const DataProvider = ({ children }) => {
     fetchActivities,
     subscribeToActivity,
     unsubscribeFromActivity,
+
+    // Labels
+    clearUserLabels,
 
     // Tracks
     tracks,

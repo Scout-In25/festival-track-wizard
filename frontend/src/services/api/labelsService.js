@@ -13,6 +13,15 @@ class LabelsService {
   async assignLabels(assignmentData) {
     return apiRequest('post', '/labels/assign', assignmentData);
   }
+
+  /**
+   * Clear labels for a specific user
+   * @param {string} username - Username to clear labels for
+   * @returns {Promise} API response
+   */
+  async clearLabels(username) {
+    return apiRequest('post', `/labels/clear/${username}`);
+  }
 }
 
 // Export singleton instance

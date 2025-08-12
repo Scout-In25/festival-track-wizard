@@ -158,7 +158,8 @@ const ActivitiesListPage = () => {
     hasCompletedWizard,
     userProfileLoading,
     subscribeToActivity, 
-    unsubscribeFromActivity, 
+    unsubscribeFromActivity,
+    clearUserLabels,
     tracks, 
     tracksLoading, 
     tracksError,
@@ -702,6 +703,40 @@ const ActivitiesListPage = () => {
   };
 
 
+  const handleResetWizard = async () => {
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      'Weet je zeker dat je de keuzekompas opnieuw wilt doorlopen? Je huidige voorkeuren worden verwijderd.'
+    );
+    
+    if (!confirmed) {
+      return;
+    }
+    
+    // Get username
+    const username = participant?.username || wordpressUser?.username;
+    
+    if (!username) {
+      showError('Gebruikersnaam niet gevonden. Probeer de pagina te vernieuwen.');
+      return;
+    }
+    
+    try {
+      const result = await clearUserLabels(username);
+      
+      if (result.success) {
+        showInfo('Je voorkeuren zijn gereset. Je wordt doorgestuurd naar de keuzekompas...');
+        // The AppRouter will automatically redirect to wizard
+        // since hasCompletedWizard will become false after profile refresh
+      } else {
+        showError(result.error || 'Er is iets misgegaan bij het resetten van je voorkeuren.');
+      }
+    } catch (error) {
+      console.error('Failed to reset wizard:', error);
+      showError('Er is iets misgegaan bij het resetten van je voorkeuren.');
+    }
+  };
+
   const handleSubscribeToggle = async (activityId) => {
     if (!isUserLoggedIn) {
       showError('Je moet ingelogd zijn om je aan te melden voor activiteiten');
@@ -807,6 +842,26 @@ const ActivitiesListPage = () => {
         {window.FestivalWizardData?.activitiesIntro || 'Hier vind je alle activiteiten van Scout-in. Je kunt de activiteiten bekijken en beheren in deze lijst.'}
       </p>
 
+      {/* Reset Wizard Button - only show for logged-in users who have completed wizard */}
+      {isUserLoggedIn && hasCompletedWizard && (
+        <div className="reset-wizard-container" style={{ marginBottom: '20px', marginTop: '64px' }}>
+          <span className="text-sm text-right">
+            Op zoek naar nieuwe suggesties?<br />Start dan het keuzekompas.
+          </span>
+          <button 
+            className="reset-wizard-button ml-3 w-10 h-10 inline-block text-center"
+            style={{ padding: '0px' }}
+            onClick={handleResetWizard}
+            title="Wil je opnieuw de keuzekompas doorlopen voor nieuwe suggesties, start dan de keuzekompas."
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+            </svg>
+          </button>
+          
+        </div>
+      )}
+
       {/* Personalized Suggestions Block */}
       <SuggestionsBlock 
         activities={activities}
@@ -818,6 +873,8 @@ const ActivitiesListPage = () => {
           setIsSimpleView(isSimple);
         }}
       />
+
+      
 
       {/* Combined Header with Title and Filters */}
       <div className="content-header">
