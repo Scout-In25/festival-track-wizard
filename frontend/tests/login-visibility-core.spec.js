@@ -42,7 +42,7 @@ test.describe('Core Login Visibility Tests - Fast', () => {
       // This test just provides instructions
       console.log('');
       console.log('🔧 TO TEST LOGGED-IN STATE:');
-      console.log('   1. Edit frontend/.env and uncomment: VITE_USERNAME=sn_22anniek22');
+      console.log('   1. Edit frontend/.env and uncomment: VITE_USERNAME=timo');
       console.log('   2. Wait for dev server to reload (watch mode)');
       console.log('   3. Refresh browser');
       console.log('   4. Verify:');

@@ -65,30 +65,45 @@ class DataService {
       return wordpressService.getCurrentParticipantProfile();
     }
 
-    // Development mode - fetch real participant from API using env username
-    if (import.meta.env.DEV && import.meta.env.VITE_USERNAME) {
-      console.log('DataService: Fetching participant from API using username:', import.meta.env.VITE_USERNAME);
+    // Development mode - use mock data if available, otherwise try API
+    if (import.meta.env.DEV) {
+      // Use mock dev profile if available (simulates your empty labels case)
+      if (typeof window !== 'undefined' && window.mockDevUserProfile) {
+        return Promise.resolve(window.mockDevUserProfile);
+      }
       
-      try {
-        const participantResponse = await participantsService.getByUsername(import.meta.env.VITE_USERNAME);
-        console.log('DataService: Participant API response:', participantResponse);
-        
-        // Create WordPress user data for consistency with WordPress environment
-        const wordpressUserData = {
-          username: participantResponse.data.username || import.meta.env.VITE_USERNAME,
-          email: participantResponse.data.email || '',
-          first_name: participantResponse.data.firstname || '',
-          last_name: participantResponse.data.surname || '',
-          display_name: `${participantResponse.data.firstname} ${participantResponse.data.surname}`
-        };
-        
-        return {
-          participant: participantResponse.data,
-          wordpress_user: wordpressUserData
-        };
-      } catch (error) {
-        console.error('DataService: Failed to fetch participant from API:', error);
-        throw new Error(`Failed to fetch participant: ${error.message}`);
+      // Fallback to API if username is configured
+      if (import.meta.env.VITE_USERNAME) {
+        try {
+          const participantResponse = await participantsService.getByUsername(import.meta.env.VITE_USERNAME);
+          
+          // Create WordPress user data for consistency with WordPress environment
+          const wordpressUserData = {
+            username: participantResponse.data.username || import.meta.env.VITE_USERNAME,
+            email: participantResponse.data.email || '',
+            first_name: participantResponse.data.firstname || '',
+            last_name: participantResponse.data.surname || '',
+            display_name: `${participantResponse.data.firstname} ${participantResponse.data.surname}`
+          };
+          
+          // Apply dev mode label override if configured
+          let participantData = participantResponse.data;
+          if (import.meta.env.VITE_USER_LABELS) {
+            const devLabels = import.meta.env.VITE_USER_LABELS.split(',').map(label => label.trim());
+            participantData = {
+              ...participantData,
+              labels: devLabels
+            };
+          }
+
+          return {
+            participant: participantData,
+            wordpress_user: wordpressUserData
+          };
+        } catch (error) {
+          console.error('Failed to fetch participant from API:', error);
+          throw new Error(`Failed to fetch participant: ${error.message}`);
+        }
       }
     }
 
@@ -135,9 +150,10 @@ class DataService {
       return wordpressService.isUserLoggedIn();
     }
 
-    // Development mode - only logged in if username is configured
+    // Development mode with mock data or configured username
     if (import.meta.env.DEV) {
-      return !!import.meta.env.VITE_USERNAME;
+      // Check if we have mock dev user profile or configured username
+      return !!(window.mockDevUserProfile || import.meta.env.VITE_USERNAME || window.FestivalWizardData?.isLoggedIn);
     }
 
     // Production mode without WordPress - check for user data

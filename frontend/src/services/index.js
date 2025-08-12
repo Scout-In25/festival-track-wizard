@@ -8,6 +8,7 @@ import participantsService from './api/participantsService.js';
 import tracksService from './api/tracksService.js';
 import activitiesService from './api/activitiesService.js';
 import suggestionsService from './api/suggestionsService.js';
+import labelsService from './api/labelsService.js';
 import wordpressService from './api/wordpressService.js';
 import dataService from './dataService.js';
 
@@ -17,6 +18,7 @@ export {
   tracksService,
   activitiesService,
   suggestionsService,
+  labelsService,
   wordpressService,
   dataService
 };
@@ -27,6 +29,7 @@ export default {
   tracks: tracksService,
   activities: activitiesService,
   suggestions: suggestionsService,
+  labels: labelsService,
   wordpress: wordpressService,
   data: dataService
 };

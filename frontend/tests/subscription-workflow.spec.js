@@ -95,7 +95,7 @@ test.describe('Subscription Workflow', () => {
         body: JSON.stringify({
           data: {
             id: '123',
-            username: 'sn_22anniek22',
+            username: 'timo',
             firstname: 'Test',
             surname: 'User',
             email: 'test@example.com',
@@ -190,7 +190,7 @@ test.describe('Subscription Workflow', () => {
                 activities: subscribedActivities
               },
               wordpress_user: {
-                username: 'sn_22anniek22',
+                username: 'timo',
                 email: 'test@example.com',
                 displayName: 'Test User'
               }
@@ -250,7 +250,7 @@ test.describe('Subscription Workflow', () => {
         activitiesTitle: 'Festival Activiteiten',
         activitiesIntro: 'Hier vind je alle activiteiten van het festival',
         currentUser: {
-          username: 'sn_22anniek22',
+          username: 'timo',
           email: 'test@example.com',
           firstName: 'Test',
           lastName: 'User',
@@ -266,7 +266,7 @@ test.describe('Subscription Workflow', () => {
               DEV: true, // Set to true to use API endpoints
               VITE_API_KEY: 'test-key',
               VITE_API_BASE_URL: 'https://test.example.com',
-              VITE_USERNAME: 'sn_22anniek22'
+              VITE_USERNAME: 'timo'
             }
           }
         },

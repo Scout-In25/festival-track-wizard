@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { activitiesService } from './services/api/activitiesService.js';
 import { useDataContext } from './contexts/DataProvider.jsx';
 import { useToast } from './hooks/useToast';
 import { validateActivities, deduplicateActivitiesByTitleAndTime, analyzeDuplicates, deduplicateActivities, createTitleHash } from './utils/activityDeduplication.js';
 import ActivityDetailsModal from './components/ActivityDetailsModal.jsx';
+import SuggestionsBlock from './components/SuggestionsBlock.jsx';
 import './ActivitiesListPage.css';
 
 // Icon components
@@ -148,81 +149,138 @@ const ActivitiesListPage = () => {
   const [showMyScheduleOnly, setShowMyScheduleOnly] = useState(false);
   const [subscribingActivities, setSubscribingActivities] = useState({});
   const [selectedTrackId, setSelectedTrackId] = useState('');
+  const [isTrackAutoSelected, setIsTrackAutoSelected] = useState(false);
   
-  const { participant, wordpressUser, isUserLoggedIn, subscribeToActivity, unsubscribeFromActivity, tracks, tracksLoading, tracksError } = useDataContext();
+  const { 
+    participant, 
+    wordpressUser, 
+    isUserLoggedIn,
+    hasCompletedWizard,
+    userProfileLoading,
+    subscribeToActivity, 
+    unsubscribeFromActivity, 
+    tracks, 
+    tracksLoading, 
+    tracksError,
+    suggestions,
+    suggestionsLoading,
+    suggestionsError,
+    fetchSuggestions
+  } = useDataContext();
   const { showInfo, showError } = useToast();
 
-  useEffect(() => {
-    loadActivities();
-  }, []);
-
-  // Development mock data overrides
-  const applyDevMockData = (activitiesList) => {
-    if (!import.meta.env.DEV) return activitiesList;
-    
-    return activitiesList.map(activity => {
-      // Mock specific activity as full for testing
-      if (activity.id === '8af471b0-5122-4c28-a638-98fba3c07455') {
-        console.log('🔧 DEV: Mocking activity as full:', activity.name || activity.title);
-        return {
-          ...activity,
-          current_subscriptions: 100,
-          // Ensure it has a capacity to test against
-          capacity: activity.capacity || activity.metadata?.max_participants || 50
-        };
-      }
-      
-      // Add more mock overrides here as needed
-      // Example:
-      // if (activity.id === 'another-activity-id') {
-      //   return { ...activity, some_property: 'mock_value' };
-      // }
-      
-      return activity;
-    });
-  };
-
-  const loadActivities = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await activitiesService.getAll();
-      const rawActivities = response.data || [];
-      
-      // Step 1: Validate activities and remove bad entries
-      const validActivities = validateActivities(rawActivities);
-      
-      // Step 2: Apply development mock data overrides
-      const mockedActivities = applyDevMockData(validActivities);
-      
-      // Step 3: Analyze duplicates after validation
-      const duplicateAnalysis = analyzeDuplicates(mockedActivities);
-      console.info('Duplicate analysis:', duplicateAnalysis);
-      
-      // Step 4: Deduplicate activities by title
-      const deduplicatedActivities = deduplicateActivitiesByTitleAndTime(mockedActivities);
-      
-      // Step 5: Sort by date/time
-      const sortedActivities = sortActivitiesByDateTime(deduplicatedActivities);
-      
-      setActivities(sortedActivities);
-    } catch (err) {
-      setError(err.message);
-      console.error('Failed to load activities:', err);
-    } finally {
-      setLoading(false);
+  // Utility functions that need to be defined early
+  const isUserSubscribed = (activityId) => {
+    if (!participant || !participant.activities || !Array.isArray(participant.activities)) {
+      return false;
     }
+    return participant.activities.includes(activityId);
   };
 
-  const sortActivitiesByDateTime = (activitiesList) => {
-    return activitiesList.sort((a, b) => {
-      const dateA = new Date(a.start_time);
-      const dateB = new Date(b.start_time);
-      return dateA - dateB;
+  const hasTimeOverlap = (activity1, activity2) => {
+    const start1 = new Date(activity1.start_time);
+    const end1 = new Date(activity1.end_time);
+    const start2 = new Date(activity2.start_time);
+    const end2 = new Date(activity2.end_time);
+    return start1 < end2 && start2 < end1;
+  };
+
+  const getSubscribedActivities = () => {
+    if (!participant?.activities || !activities.length) return [];
+    return activities.filter(activity => participant.activities.includes(activity.id));
+  };
+
+  const getConflictingActivities = (targetActivity) => {
+    // Only check conflicts for logged-in users who aren't already subscribed to this activity
+    if (!isUserLoggedIn || isUserSubscribed(targetActivity.id)) return [];
+    
+    const subscribedActivities = getSubscribedActivities();
+    return subscribedActivities.filter(subscribedActivity => 
+      hasTimeOverlap(targetActivity, subscribedActivity)
+    );
+  };
+
+  // Activity eligibility checker for "Alleen Beschikbaar" filter
+  const isActivityEligible = (activity) => {
+    // Check participant data
+    if (!participant) {
+      return false;
+    }
+    
+    // Hide activities user is already subscribed to - they're not "available" to add
+    if (isUserLoggedIn && isUserSubscribed(activity.id)) {
+      return false;
+    }
+    
+    // Check for time conflicts - if activity has conflict, it's not eligible
+    if (isUserLoggedIn) {
+      const conflicts = getConflictingActivities(activity);
+      if (conflicts.length > 0) {
+        return false;
+      }
+    }
+    
+    const participantLabels = participant.labels;
+    const hasParticipantLabels = participantLabels && Array.isArray(participantLabels) && participantLabels.length > 0;
+    
+    // Check activity requirements
+    const activityLabels = activity.labels;
+    const hasActivityLabels = activityLabels && Array.isArray(activityLabels) && activityLabels.length > 0;
+    
+    // If activity has no label requirements, it's available to everyone (unless there are conflicts)
+    if (!hasActivityLabels) {
+      return true;
+    }
+    
+    // If participant has no labels but activity requires labels, not eligible
+    if (!hasParticipantLabels) {
+      return false;
+    }
+    
+    // Check if participant has any of the required labels
+    const isEligible = activityLabels.some(requiredLabel => 
+      participantLabels.includes(requiredLabel)
+    );
+    
+    return isEligible;
+  };
+
+  // Filter functions - need to be defined before useMemo hooks
+  const applyEligibilityFilter = (activitiesList) => {
+    if (!showEligibleOnly) return activitiesList;
+    
+    const filtered = activitiesList.filter(activity => isActivityEligible(activity));
+    
+    return filtered;
+  };
+
+  const applyScheduleFilter = (activitiesList) => {
+    if (!showMyScheduleOnly) return activitiesList;
+    return activitiesList.filter(activity => isUserSubscribed(activity.id));
+  };
+
+  const applyTrackFilter = (activitiesList) => {
+    if (!selectedTrackId) return activitiesList;
+    
+    // Find the selected track
+    const selectedTrack = tracks.find(track => track.id === selectedTrackId);
+    if (!selectedTrack || !selectedTrack.activities) {
+      return activitiesList; // Return all activities if track not found, don't return empty array
+    }
+    
+    // Filter activities that match the track's activity numbers
+    const filtered = activitiesList.filter(activity => {
+      // Try multiple possible field names for activity identification
+      const activityIdentifier = activity.number || activity.code || activity.activity_number;
+      const hasMatch = activityIdentifier && selectedTrack.activities.includes(activityIdentifier);
+      
+      return hasMatch;
     });
+    
+    return filtered;
   };
 
-  // Simple view processing functions
+  // Utility functions for data processing - need to be defined before useMemo hooks
   const deduplicateByTitleOnly = (activitiesList) => {
     const seenHashes = new Set();
     
@@ -258,6 +316,163 @@ const ActivitiesListPage = () => {
     });
     return grouped;
   };
+
+  // Memoize processed activities for simple view to avoid re-computation on every render
+  const processedSimpleActivities = useMemo(() => {
+    // Process activities for simple view: deduplicate by title and sort alphabetically
+    // Note: activities are already validated in loadActivities, no need to re-validate
+    // Apply track filter first as base filter
+    let filteredActivities = applyTrackFilter(activities);
+    // Then apply other filters on top
+    filteredActivities = applyEligibilityFilter(filteredActivities);
+    filteredActivities = applyScheduleFilter(filteredActivities);
+    const uniqueActivities = deduplicateByTitleOnly(filteredActivities);
+    const sortedActivities = sortActivitiesAlphabetically(uniqueActivities);
+    return sortedActivities;
+  }, [activities, selectedTrackId, showEligibleOnly, showMyScheduleOnly, participant, tracks]);
+
+  // Memoize filtered activities for full view to avoid re-computation on every render
+  const filteredActivitiesForFullView = useMemo(() => {
+    // Apply track filter first as base filter
+    let filtered = applyTrackFilter(activities);
+    // Then apply other filters on top
+    filtered = applyEligibilityFilter(filtered);
+    filtered = applyScheduleFilter(filtered);
+    return filtered;
+  }, [activities, selectedTrackId, showEligibleOnly, showMyScheduleOnly, participant, tracks]);
+
+  // Memoize grouped activities for calendar view
+  const groupedActivities = useMemo(() => {
+    return groupActivitiesByDay(filteredActivitiesForFullView);
+  }, [filteredActivitiesForFullView]);
+
+  useEffect(() => {
+    loadActivities();
+  }, []);
+
+  // Auto-select first suggested track when suggestions are loaded
+  useEffect(() => {
+    if (suggestions && !suggestionsLoading && !selectedTrackId) {
+      const suggestedTracks = suggestions.suggested_tracks || suggestions.tracks || [];
+      
+      if (suggestedTracks.length > 0) {
+        const firstSuggestedTrack = suggestedTracks[0];
+        
+        // Check if this track ID exists in the available tracks
+        const trackExists = tracks.find(track => track.id === firstSuggestedTrack.id);
+        
+        if (trackExists) {
+          setSelectedTrackId(firstSuggestedTrack.id);
+          setIsTrackAutoSelected(true);
+        }
+        // Don't auto-select if the suggested track doesn't exist in available tracks
+      }
+    }
+  }, [suggestions, suggestionsLoading, selectedTrackId, tracks]);
+
+  // Auto-fetch suggestions for users who have completed wizard but have no activity subscriptions
+  useEffect(() => {
+    // Only proceed if user profile is loaded and we have the necessary data
+    if (userProfileLoading || !isUserLoggedIn || !hasCompletedWizard) {
+      return;
+    }
+
+    // Check if user has no activity subscriptions
+    const hasNoActivities = !participant?.activities || participant.activities.length === 0;
+    
+    // Check if we already have suggestions or are currently loading them
+    const alreadyHasSuggestions = suggestions || suggestionsLoading;
+
+    // Fetch suggestions if user is eligible and doesn't already have them
+    if (hasNoActivities && !alreadyHasSuggestions && fetchSuggestions) {
+      const username = wordpressUser?.username || participant?.username;
+      
+      if (username) {
+        fetchSuggestions(username).catch(error => {
+          console.error('[ActivitiesListPage] Auto-fetch suggestions failed:', error);
+          // Don't show error to user as this is a background operation
+        });
+      } else {
+        console.warn('[ActivitiesListPage] Cannot auto-fetch suggestions: no username available');
+      }
+    }
+  }, [
+    userProfileLoading, 
+    isUserLoggedIn, 
+    hasCompletedWizard, 
+    participant?.activities,
+    suggestions,
+    suggestionsLoading,
+    fetchSuggestions,
+    wordpressUser?.username,
+    participant?.username
+  ]);
+
+  // Development mock data overrides
+  const applyDevMockData = (activitiesList) => {
+    if (!import.meta.env.DEV) return activitiesList;
+    
+    return activitiesList.map(activity => {
+      // Mock specific activity as full for testing
+      if (activity.id === '8af471b0-5122-4c28-a638-98fba3c07455') {
+        return {
+          ...activity,
+          current_subscriptions: 100,
+          // Ensure it has a capacity to test against
+          capacity: activity.capacity || activity.metadata?.max_participants || 50
+        };
+      }
+      
+      // Add more mock overrides here as needed
+      // Example:
+      // if (activity.id === 'another-activity-id') {
+      //   return { ...activity, some_property: 'mock_value' };
+      // }
+      
+      return activity;
+    });
+  };
+
+  const loadActivities = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await activitiesService.getAll();
+      const rawActivities = response.data || [];
+      
+      // Step 1: Validate activities and remove bad entries
+      const validActivities = validateActivities(rawActivities);
+      
+      // Step 2: Apply development mock data overrides
+      const mockedActivities = applyDevMockData(validActivities);
+      
+      // Step 3: Analyze duplicates after validation
+      const duplicateAnalysis = analyzeDuplicates(mockedActivities);
+      // console.info('Duplicate analysis:', duplicateAnalysis);
+      
+      // Step 4: Deduplicate activities by title
+      const deduplicatedActivities = deduplicateActivitiesByTitleAndTime(mockedActivities);
+      
+      // Step 5: Sort by date/time
+      const sortedActivities = sortActivitiesByDateTime(deduplicatedActivities);
+      
+      setActivities(sortedActivities);
+    } catch (err) {
+      setError(err.message);
+      console.error('Failed to load activities:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sortActivitiesByDateTime = (activitiesList) => {
+    return activitiesList.sort((a, b) => {
+      const dateA = new Date(a.start_time);
+      const dateB = new Date(b.start_time);
+      return dateA - dateB;
+    });
+  };
+
 
   const formatTime = (timeString) => {
     const date = new Date(timeString);
@@ -358,7 +573,6 @@ const ActivitiesListPage = () => {
       return;
     }
 
-    console.log('Unsubscribing from conflict:', { activityId, username });
     setSubscribingActivities(prev => ({ ...prev, [activityId]: true }));
 
     try {
@@ -390,7 +604,6 @@ const ActivitiesListPage = () => {
     }
 
     const isSubscribed = isUserSubscribed(timeSlotActivityId);
-    console.log('Time slot subscription toggle:', { timeSlotActivityId, username, isSubscribed });
     setSubscribingActivities(prev => ({ ...prev, [timeSlotActivityId]: true }));
 
     try {
@@ -420,9 +633,6 @@ const ActivitiesListPage = () => {
     }
   };
 
-  const isUserSubscribed = (activityId) => {
-    return participant?.activities?.includes(activityId) || false;
-  };
 
   const getActivityStatus = (activity) => {
     // Check if user is subscribed (highest priority)
@@ -444,32 +654,6 @@ const ActivitiesListPage = () => {
     }
     
     return 'available';
-  };
-
-  // Time overlap utility function
-  const hasTimeOverlap = (activity1, activity2) => {
-    const start1 = new Date(activity1.start_time);
-    const end1 = new Date(activity1.end_time);
-    const start2 = new Date(activity2.start_time);
-    const end2 = new Date(activity2.end_time);
-    return start1 < end2 && start2 < end1;
-  };
-
-  // Get full activity objects for user's subscribed activities
-  const getSubscribedActivities = () => {
-    if (!participant?.activities || !activities.length) return [];
-    return activities.filter(activity => participant.activities.includes(activity.id));
-  };
-
-  // Get conflicting activities for a target activity
-  const getConflictingActivities = (targetActivity) => {
-    // Only check conflicts for logged-in users who aren't already subscribed to this activity
-    if (!isUserLoggedIn || isUserSubscribed(targetActivity.id)) return [];
-    
-    const subscribedActivities = getSubscribedActivities();
-    return subscribedActivities.filter(subscribedActivity => 
-      hasTimeOverlap(targetActivity, subscribedActivity)
-    );
   };
 
   // Get available time slots for an activity (same name, different times)
@@ -497,8 +681,8 @@ const ActivitiesListPage = () => {
       }));
   };
 
-  // Check if activity is eligible for subscription
-  const isActivityEligible = (activity) => {
+  // Check if activity is eligible for subscription (different from label-based eligibility)
+  const isActivitySubscriptionEligible = (activity) => {
     // Only apply filtering for logged in users
     if (!isUserLoggedIn) return true;
     
@@ -517,32 +701,6 @@ const ActivitiesListPage = () => {
     return !hasOverlap;
   };
 
-  // Apply eligibility filter to activities list
-  const applyEligibilityFilter = (activitiesList) => {
-    if (!showEligibleOnly) return activitiesList;
-    return activitiesList.filter(activity => isActivityEligible(activity));
-  };
-
-  // Apply schedule filter to show only subscribed activities
-  const applyScheduleFilter = (activitiesList) => {
-    if (!showMyScheduleOnly) return activitiesList;
-    return activitiesList.filter(activity => isUserSubscribed(activity.id));
-  };
-
-  // Apply track filter to show only activities from selected track
-  const applyTrackFilter = (activitiesList) => {
-    if (!selectedTrackId) return activitiesList;
-    
-    // Find the selected track
-    const selectedTrack = tracks.find(track => track.id === selectedTrackId);
-    if (!selectedTrack || !selectedTrack.activities) return activitiesList;
-    
-    // Filter activities that match the track's activity numbers
-    return activitiesList.filter(activity => {
-      // Match using the 'number' field (e.g., "W36", "S12")
-      return activity.number && selectedTrack.activities.includes(activity.number);
-    });
-  };
 
   const handleSubscribeToggle = async (activityId) => {
     if (!isUserLoggedIn) {
@@ -559,7 +717,6 @@ const ActivitiesListPage = () => {
       return;
     }
 
-    console.log('Subscribe toggle:', { activityId, username, isSubscribed: isUserSubscribed(activityId) });
     setSubscribingActivities(prev => ({ ...prev, [activityId]: true }));
 
     try {
@@ -590,25 +747,14 @@ const ActivitiesListPage = () => {
     }
   };
 
-
-  const renderSimpleList = (activitiesList) => {
-    // Process activities for simple view: deduplicate by title and sort alphabetically
-    const validActivities = validateActivities(activitiesList);
-    // Apply track filter first as base filter
-    let filteredActivities = applyTrackFilter(validActivities);
-    // Then apply other filters on top
-    filteredActivities = applyEligibilityFilter(filteredActivities);
-    filteredActivities = applyScheduleFilter(filteredActivities);
-    const uniqueActivities = deduplicateByTitleOnly(filteredActivities);
-    const sortedActivities = sortActivitiesAlphabetically(uniqueActivities);
-
-    if (sortedActivities.length === 0) {
+  const renderSimpleList = () => {
+    if (processedSimpleActivities.length === 0) {
       return <h2 className="no-activities">Geen activiteiten</h2>;
     }
 
     return (
       <ul className="simple-activities-list">
-        {sortedActivities.map(activity => (
+        {processedSimpleActivities.map(activity => (
           <li key={activity.id} className="simple-activity-item">
             <div 
               className="simple-activity-header"
@@ -653,13 +799,6 @@ const ActivitiesListPage = () => {
     );
   }
 
-  // Apply filters before grouping for calendar view
-  // Apply track filter first as base filter
-  let filteredActivities = applyTrackFilter(activities);
-  // Then apply other filters on top
-  filteredActivities = applyEligibilityFilter(filteredActivities);
-  filteredActivities = applyScheduleFilter(filteredActivities);
-  const groupedActivities = groupActivitiesByDay(filteredActivities);
 
   return (
     <div className="activities-list-page">
@@ -667,6 +806,18 @@ const ActivitiesListPage = () => {
       <p>
         {window.FestivalWizardData?.activitiesIntro || 'Hier vind je alle activiteiten van Scout-in. Je kunt de activiteiten bekijken en beheren in deze lijst.'}
       </p>
+
+      {/* Personalized Suggestions Block */}
+      <SuggestionsBlock 
+        activities={activities}
+        tracks={tracks}
+        onTrackFilterApply={(trackId) => {
+          setSelectedTrackId(trackId);
+        }}
+        onViewModeChange={(isSimple) => {
+          setIsSimpleView(isSimple);
+        }}
+      />
 
       {/* Combined Header with Title and Filters */}
       <div className="content-header">
@@ -680,18 +831,28 @@ const ActivitiesListPage = () => {
                 fontSize: '0.9rem', 
                 fontWeight: '500', 
                 color: '#2d3748', 
-                marginRight: '8px',
                 display: 'inline-block',
                 marginBottom: '4px',
                 marginRight: '12px'
               }}>
               <strong>Track:</strong>
+              {isTrackAutoSelected && (
+                <span style={{ 
+                  fontSize: '0.8rem', 
+                  color: '#667eea', 
+                  fontWeight: 'normal',
+                  marginLeft: '8px'
+                }}>
+                  (aanbeveling)
+                </span>
+              )}
               </label>
               <select 
                 id="track-dropdown"
                 value={selectedTrackId}
                 onChange={(e) => {
                   setSelectedTrackId(e.target.value);
+                  setIsTrackAutoSelected(false); // User manually selected, no longer auto-selected
                   // Track filter can now be combined with other filters
                   // No need to reset other filters
                 }}
@@ -705,7 +866,8 @@ const ActivitiesListPage = () => {
                   color: '#374151',
                   cursor: 'pointer',
                   minWidth: '120px',
-                  marginRight: '12px'
+                  marginRight: '12px',
+                  width: '100%',
                 }}
                 aria-label="Selecteer een track om activiteiten te filteren"
               >
@@ -716,6 +878,27 @@ const ActivitiesListPage = () => {
                   </option>
                 ))}
               </select>
+              {isTrackAutoSelected && selectedTrackId && (
+                <button
+                  onClick={() => {
+                    setSelectedTrackId('');
+                    setIsTrackAutoSelected(false);
+                  }}
+                  style={{
+                    marginLeft: '8px',
+                    padding: '4px 8px',
+                    fontSize: '0.8rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    backgroundColor: '#f8f9fa',
+                    color: '#6c757d',
+                    cursor: 'pointer'
+                  }}
+                  title="Reset track filter"
+                >
+                  Reset
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -734,6 +917,10 @@ const ActivitiesListPage = () => {
                   // Disable eligibility filter when showing schedule, but keep track filter
                   if (checked) {
                     setShowEligibleOnly(false);
+                    // Reset track filter to "Alle tracks" when showing personal schedule
+                    setSelectedTrackId('');
+                    // Enable calendar view for better schedule visualization
+                    setIsSimpleView(false);
                   }
                 }}
                 ariaLabel="Toon alleen mijn schema"
@@ -779,7 +966,7 @@ const ActivitiesListPage = () => {
         activities.length === 0 ? (
           <h2 className="no-activities">Geen activiteiten</h2>
         ) : (
-          renderSimpleList(activities)
+          renderSimpleList()
         )
       ) : (
         Object.keys(groupedActivities).length === 0 ? (

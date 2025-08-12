@@ -58,17 +58,10 @@ const Toast = ({ id, type, message, onClose }) => {
       </div>
       <button
         onClick={() => onClose(id)}
-        className="ml-4 bg-white text-gray-800 hover:bg-gray-200 focus:outline-none p-2 rounded border border-gray-300"
-        style={{
-          width: '32px',
-          height: '32px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}
+        className="ml-4 bg-white no-shrink text-gray-800 hover:bg-gray-200 focus:outline-none p-2 rounded border border-gray-300"
         aria-label="Close"
       >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4" fill="none" stroke="#ffffff" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>

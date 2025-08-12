@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Festival Track Wizard
  * Description: A personalized festival tracking wizard.
- * Version: 1.37
+ * Version: 1.59
  * Author: D de Zeeuw / NEKO media
  */
 
@@ -493,17 +493,17 @@ add_action('wp_ajax_festival_activities_subscribe', 'festival_track_wizard_activ
 
 function festival_track_wizard_activities_subscribe() {
     // Log the start of the request
-    error_log('FESTIVAL: Subscribe request started');
-    error_log('FESTIVAL: POST data: ' . print_r($_POST, true));
+    error_log('Scout-In Subscribe request started');
+    error_log('Scout-In POST data: ' . print_r($_POST, true));
     
     // Verify nonce
     if (!wp_verify_nonce($_POST['nonce'], 'festival_track_wizard_nonce')) {
-        error_log('FESTIVAL: Nonce verification failed');
+        error_log('Scout-In Nonce verification failed');
         wp_die('Security check failed', 'Error', array('response' => 403));
     }
 
     if (empty($_POST['username']) || empty($_POST['activity_id'])) {
-        error_log('FESTIVAL: Missing username or activity_id');
+        error_log('Scout-In Missing username or activity_id');
         wp_send_json_error('Username and activity ID are required', 400);
         return;
     }
@@ -513,19 +513,19 @@ function festival_track_wizard_activities_subscribe() {
     $api_key = get_option('festival_track_wizard_api_key', '');
     $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://trackapi.catriox.nl');
     
-    error_log('FESTIVAL: Username: ' . $username);
-    error_log('FESTIVAL: Activity ID: ' . $activity_id);
-    error_log('FESTIVAL: API Base URL: ' . $api_base_url);
-    error_log('FESTIVAL: API Key present: ' . (empty($api_key) ? 'NO' : 'YES'));
+    error_log('Scout-In Username: ' . $username);
+    error_log('Scout-In Activity ID: ' . $activity_id);
+    error_log('Scout-In API Base URL: ' . $api_base_url);
+    error_log('Scout-In API Key present: ' . (empty($api_key) ? 'NO' : 'YES'));
     
     if (empty($api_key)) {
-        error_log('FESTIVAL: API key not configured');
+        error_log('Scout-In API key not configured');
         wp_send_json_error('API key not configured', 500);
         return;
     }
 
     $url = rtrim($api_base_url, '/') . '/activities/subscribe/' . $username . '/' . $activity_id;
-    error_log('FESTIVAL: Request URL: ' . $url);
+    error_log('Scout-In Request URL: ' . $url);
     
     $request_args = array(
         'method' => 'PUT',
@@ -535,13 +535,13 @@ function festival_track_wizard_activities_subscribe() {
         ),
         'timeout' => 30
     );
-    error_log('FESTIVAL: Request args: ' . print_r($request_args, true));
+    error_log('Scout-In Request args: ' . print_r($request_args, true));
     
     $response = wp_remote_request($url, $request_args);
 
     if (is_wp_error($response)) {
         $error_message = $response->get_error_message();
-        error_log('FESTIVAL: WP Error: ' . $error_message);
+        error_log('Scout-In WP Error: ' . $error_message);
         wp_send_json_error('Failed to subscribe to activity: ' . $error_message, 500);
         return;
     }
@@ -550,17 +550,17 @@ function festival_track_wizard_activities_subscribe() {
     $body = wp_remote_retrieve_body($response);
     $headers = wp_remote_retrieve_headers($response);
 
-    error_log('FESTIVAL: Response status: ' . $status_code);
-    error_log('FESTIVAL: Response body: ' . $body);
-    error_log('FESTIVAL: Response headers: ' . print_r($headers, true));
+    error_log('Scout-In: Response status: ' . $status_code);
+    error_log('Scout-In: Response body: ' . $body);
+    error_log('Scout-In: Response headers: ' . print_r($headers, true));
 
     if ($status_code !== 200 && $status_code !== 201 && $status_code !== 204) {
-        error_log('FESTIVAL: API request failed with status ' . $status_code . ', body: ' . $body);
+        error_log('Scout-In: API request failed with status ' . $status_code . ', body: ' . $body);
         wp_send_json_error('API request failed with status ' . $status_code . ': ' . $body, $status_code);
         return;
     }
 
-    error_log('FESTIVAL: Subscribe successful');
+    error_log('Scout-In: Subscribe successful');
     wp_send_json_success(array('message' => 'Successfully subscribed to activity'));
 }
 

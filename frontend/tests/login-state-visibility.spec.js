@@ -144,7 +144,7 @@ test.describe('Login State Visibility Tests', () => {
         }
         window.import.meta.env = {
           DEV: true,
-          VITE_USERNAME: 'sn_22anniek22',
+          VITE_USERNAME: 'timo',
           VITE_API_KEY: 'test-api-key',
           VITE_API_BASE_URL: 'https://trackapi.catriox.nl',
           VITE_DEBUG: false,
@@ -154,7 +154,7 @@ test.describe('Login State Visibility Tests', () => {
         // Also set process.env for compatibility
         window.process = window.process || {};
         window.process.env = window.process.env || {};
-        window.process.env.VITE_USERNAME = 'sn_22anniek22';
+        window.process.env.VITE_USERNAME = 'timo';
         window.process.env.DEV = 'true';
         
         // Mock WordPress user data for logged-in state
@@ -168,7 +168,7 @@ test.describe('Login State Visibility Tests', () => {
           activitiesIntro: 'Test intro',
           isLoggedIn: true,
           currentUser: {
-            username: 'sn_22anniek22',
+            username: 'timo',
             email: 'test@example.com',
             firstName: 'Test',
             lastName: 'User',
@@ -337,10 +337,10 @@ test.describe('Login State Visibility Tests', () => {
       
       // Simulate login by updating environment
       await page.evaluate(() => {
-        window.process.env.VITE_USERNAME = 'sn_22anniek22';
+        window.process.env.VITE_USERNAME = 'timo';
         window.FestivalWizardData.isLoggedIn = true;
         window.FestivalWizardData.currentUser = {
-          username: 'sn_22anniek22',
+          username: 'timo',
           email: 'test@example.com',
           firstName: 'Test',
           lastName: 'User',
@@ -371,7 +371,7 @@ test.describe('Login State Visibility Tests', () => {
       await page.addInitScript(() => {
         window.process = window.process || {};
         window.process.env = window.process.env || {};
-        window.process.env.VITE_USERNAME = 'sn_22anniek22';
+        window.process.env.VITE_USERNAME = 'timo';
         window.process.env.DEV = 'true';
         
         window.FestivalWizardData = {
@@ -382,7 +382,7 @@ test.describe('Login State Visibility Tests', () => {
           showTracksOnly: true,
           isLoggedIn: true,
           currentUser: {
-            username: 'sn_22anniek22',
+            username: 'timo',
             email: 'test@example.com',
             firstName: 'Test',
             lastName: 'User',

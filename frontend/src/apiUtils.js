@@ -10,9 +10,6 @@ import axios from 'axios';
 export const getApiKey = () => {
   // Check if we're in development mode and have an environment variable
   if (import.meta.env.DEV && import.meta.env.VITE_API_KEY) {
-    if (import.meta.env.VITE_DEBUG) {
-      console.log('Using API key from environment variable (development mode)');
-    }
     return import.meta.env.VITE_API_KEY;
   }
 
@@ -33,11 +30,13 @@ export const getApiKey = () => {
  * @returns {string} The API base URL
  */
 export const getApiBaseUrl = () => {
-  // In development mode, use Vite proxy to avoid CORS issues
+  // In development mode, check if we have WordPress data configured
+  if (import.meta.env.DEV && window.FestivalWizardData?.apiBaseUrl) {
+    return window.FestivalWizardData.apiBaseUrl;
+  }
+  
+  // In development mode without WordPress data, use Vite proxy to avoid CORS issues
   if (import.meta.env.DEV) {
-    if (import.meta.env.VITE_DEBUG) {
-      console.log('Using Vite proxy for API calls (development mode)');
-    }
     // All API calls will be proxied through /api in development
     return '/api';
   }
@@ -98,11 +97,6 @@ export const apiRequest = async (method, endpoint, data = null, config = {}) => 
     // Build full URL if endpoint is relative
     const url = endpoint.startsWith('http') ? endpoint : buildApiUrl(endpoint);
     
-    if (import.meta.env.VITE_DEBUG) {
-      console.log(`API ${method.toUpperCase()} request to:`, url);
-      if (data) console.log('Request data:', data);
-    }
-    
     let response;
     switch (method.toLowerCase()) {
       case 'get':
@@ -119,10 +113,6 @@ export const apiRequest = async (method, endpoint, data = null, config = {}) => 
         break;
       default:
         throw new Error(`Unsupported HTTP method: ${method}`);
-    }
-    
-    if (import.meta.env.VITE_DEBUG) {
-      console.log(`API ${method.toUpperCase()} response:`, response.data);
     }
     
     return response;

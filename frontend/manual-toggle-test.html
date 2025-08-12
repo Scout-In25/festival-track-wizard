@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manual Toggle Test</title>
+</head>
+<body>
+    <h1>Manual Toggle Test</h1>
+    <p>Open browser console and navigate to <a href="http://localhost:5175/#activities-list" target="_blank">http://localhost:5175/#activities-list</a></p>
+    <p>Steps to test:</p>
+    <ol>
+        <li>Wait for activities to load</li>
+        <li>Look for "Alleen Beschikbaar" toggle</li>
+        <li>Click the toggle ON - watch console for errors</li>
+        <li>Click the toggle OFF - watch console for errors</li>
+        <li>If no "Cannot access uninitialized variable" errors appear, the fix worked!</li>
+    </ol>
+    
+    <script>
+        console.log('🧪 Manual test page loaded');
+        console.log('🔗 Navigate to: http://localhost:5175/#activities-list');
+        console.log('🎯 Test: Toggle "Alleen Beschikbaar" on/off');
+        console.log('✅ Success: No JavaScript errors');
+        console.log('❌ Failure: "Cannot access uninitialized variable" error');
+    </script>
+</body>
+</html>

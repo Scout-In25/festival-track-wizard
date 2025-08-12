@@ -53,7 +53,7 @@ test.describe('Debug Activities Loading', () => {
           body: JSON.stringify({
             data: {
               id: '123',
-              username: 'sn_22anniek22',
+              username: 'timo',
               firstname: 'Test',
               surname: 'User',
               email: 'test@example.com',
@@ -110,7 +110,7 @@ test.describe('Debug Activities Loading', () => {
         activitiesTitle: 'Festival Activiteiten',
         activitiesIntro: 'Test intro',
         currentUser: {
-          username: 'sn_22anniek22',
+          username: 'timo',
           email: 'test@example.com',
           firstName: 'Test',
           lastName: 'User',
@@ -125,7 +125,7 @@ test.describe('Debug Activities Loading', () => {
               DEV: true,
               VITE_API_KEY: 'test-key',
               VITE_API_BASE_URL: 'https://test.example.com',
-              VITE_USERNAME: 'sn_22anniek22'
+              VITE_USERNAME: 'timo'
             }
           }
         }

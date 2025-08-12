@@ -23,7 +23,7 @@ echo "📋 Step 2: Switching to LOGGED-IN user state..."
 echo "   (Enabling VITE_USERNAME in .env)"
 
 # Enable VITE_USERNAME
-sed -i.bak 's/# VITE_USERNAME=sn_22anniek22/VITE_USERNAME=sn_22anniek22/' .env
+sed -i.bak 's/# VITE_USERNAME=timo/VITE_USERNAME=timo/' .env
 
 echo "   Waiting 5 seconds for dev server to reload..."
 sleep 5
@@ -39,7 +39,7 @@ echo "📋 Step 3: Restoring LOGGED-OUT state for normal development..."
 echo "   (Commenting out VITE_USERNAME again)"
 
 # Restore commented state
-sed -i.bak 's/VITE_USERNAME=sn_22anniek22/# VITE_USERNAME=sn_22anniek22/' .env
+sed -i.bak 's/VITE_USERNAME=timo/# VITE_USERNAME=timo/' .env
 
 echo ""
 echo "🎉 Login state visibility tests completed!"

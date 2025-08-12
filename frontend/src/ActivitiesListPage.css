@@ -196,7 +196,7 @@
 
   .expand-indicator {
     position: absolute;
-    top: 8px;
+    bottom: calc(50% - 3px) !important;
     right: 12px;
     margin-left: 0;
   }
@@ -489,6 +489,7 @@
   .simple-activity-title {
     min-width: auto;
     font-size: 0.9rem;
+    padding-right:32px;
   }
 }
 
@@ -702,5 +703,419 @@
   .conflict-item {
     padding: 12px;
     margin: 6px 0;
+  }
+}
+
+/* Suggestions Block Styles */
+.suggestions-block {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.suggestions-block.loading {
+  background: #fff;
+}
+
+.suggestions-block.error {
+  background: #fff8f8;
+  border-color: #f5c6cb;
+}
+
+.suggestions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.suggestions-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.suggestions-title h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.suggestions-subtitle {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  margin-left: 4px;
+}
+
+.suggestions-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.suggestions-action {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  padding: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.suggestions-action:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.suggestions-action:active {
+  transform: scale(0.95);
+}
+
+.suggestions-content {
+  padding: 20px;
+}
+
+.suggestions-section {
+  margin-bottom: 24px;
+}
+
+.suggestions-section:last-child {
+  margin-bottom: 0;
+}
+
+.suggestions-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #2c3e50;
+}
+
+.suggestions-section-header h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+
+.suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.suggestion-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.suggestion-item:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-color: #d1d5db;
+}
+
+.suggestion-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.suggestion-title {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.suggestion-description {
+  color: #6c757d;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.suggestion-location {
+  color: #6c757d;
+  font-size: 0.85rem;
+  font-style: italic;
+  margin-bottom: 2px;
+}
+
+.suggestion-time {
+  color: #495057;
+  font-size: 0.85rem;
+  margin-bottom: 2px;
+}
+
+.suggestion-score {
+  color: var(--e-global-color-primary, #667eea);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.suggestion-button {
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 100px;
+  margin-left: 16px;
+}
+
+.track-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.track-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.activity-button {
+  background: #28a745;
+  color: white;
+}
+
+.activity-button:hover:not(:disabled) {
+  background: #218838;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.activity-button.subscribed {
+  background: #6c757d;
+  cursor: default;
+}
+
+.activity-button.subscribed:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.suggestion-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.no-suggestions {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6c757d;
+}
+
+.no-suggestions p {
+  margin-bottom: 16px;
+  font-size: 1rem;
+}
+
+.suggestions-refresh-button {
+  background: var(--e-global-color-primary, #667eea);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.suggestions-refresh-button:hover {
+  background: #5a67d8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* Track suggestion specific styles */
+.track-suggestion {
+  border-left: 4px solid var(--e-global-color-primary, #667eea);
+}
+
+/* Activity suggestion specific styles */
+.activity-suggestion {
+  border-left: 4px solid #28a745;
+}
+
+/* Compact suggestions styles - matching simple activities list */
+.suggestions-compact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.suggestion-compact-item {
+  background: #fff;
+  border: none;
+  transition: all 0.2s ease;
+  position: relative;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e9ecef;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.suggestion-compact-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-compact-item.even {
+  background: #f8f9fa;
+}
+
+.suggestion-compact-item:hover {
+  background: #e9ecef;
+}
+
+.suggestedtrack.suggestion-compact-item:hover{
+  background:#fff;
+}
+
+.suggestion-compact-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.suggestion-compact-title {
+  font-weight: 500;
+  color: #2c3e50;
+  font-size: 0.95rem;
+  margin-bottom: 2px;
+  overflow: hidden;
+}
+
+.suggestion-compact-description {
+  color: #6c757d;
+  font-size: 0.85rem;
+  margin-bottom: 2px;
+  margin-right: 12px;
+  line-height: 1.3;
+}
+
+.suggestion-compact-score {
+  color: var(--e-global-color-primary, #667eea);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.suggestion-compact-button.track-button {
+  padding: 10px 12px!important;
+}
+
+.suggestedtrack.suggestion-compact-item {
+  display: flex;
+  align-items: center;
+}
+
+/* Mobile status indicator positioning */
+@media (max-width: 768px) {
+  .status-indicator {
+    position: absolute !important;
+    bottom: calc(50% - 3px) !important;
+    right: -5px !important;
+    margin-left: 0 !important;
+  }
+
+  .suggestions-block .status-indicator {
+
+    right: 12px !important;
+  }
+  
+  .suggestion-compact-item {
+    position: relative;
+    padding-right: 28px !important; /* Make room for status indicator */
+  }
+
+  h2#activity-modal-title{
+    max-width: 88%; 
+  }
+}
+
+/* Responsive styles for suggestions */
+@media (max-width: 768px) {
+  .suggestion-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .suggestion-button {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .suggestion-compact-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+  
+  .suggestion-compact-button {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .suggestions-header {
+    padding: 12px 16px;
+  }
+  
+  .suggestions-title h3 {
+    font-size: 1.1rem;
+  }
+  
+  .suggestions-content {
+    padding: 16px;
+  }
+  
+  .suggestions-section {
+    margin-bottom: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .suggestions-actions {
+    gap: 4px;
+  }
+  
+  .suggestions-action {
+    padding: 4px;
+  }
+  
+  .suggestion-title {
+    font-size: 0.95rem;
+  }
+  
+  .suggestions-title {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  
+  .suggestions-subtitle {
+    display: block;
+    width: 100%;
+    margin-left: 24px;
+    margin-top: 2px;
   }
 }

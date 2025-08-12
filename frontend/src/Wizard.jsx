@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useDataContext } from './contexts/DataProvider';
-import { participantsService } from './services/api/participantsService';
+import { labelsService } from './services/api/labelsService';
 import { useToast } from './hooks/useToast';
 
 const questionnaire = [
@@ -136,7 +136,7 @@ const dynamicSchema = z.object(
 
 export default function Wizard() {
   const [currentStep, setCurrentStep] = useState(0);
-  const { wordpressUser, isUserLoggedIn, userProfileLoading } = useDataContext();
+  const { wordpressUser, isUserLoggedIn, userProfileLoading, fetchUserProfile, fetchSuggestions } = useDataContext();
   const { showInfo, showError } = useToast();
   const { register, handleSubmit, watch, formState: { errors }, trigger, setError } = useForm({
     resolver: zodResolver(dynamicSchema),
@@ -145,10 +145,6 @@ export default function Wizard() {
       return acc;
     }, {}),
   });
-
-  // Debug: Check if participantsService is available
-  console.log("participantsService available:", !!participantsService);
-  console.log("participantsService.create available:", !!participantsService?.create);
 
   const currentQuestion = questionnaire[currentStep];
   const allFormValues = watch(); // Watch all form values to check dependencies
@@ -184,9 +180,6 @@ export default function Wizard() {
   }, [currentStep]);
 
   const onSubmit = async (data) => {
-    console.log("=== FORM SUBMISSION STARTED ===");
-    console.log("Form data received:", data);
-    console.log("WordPress user data:", wordpressUser);
     
     try {
       // Check if user data is available
@@ -208,64 +201,62 @@ export default function Wizard() {
       if (data.bestuurRol) labels.push(data.bestuurRol);
       if (data.vrijwilligerDuur) labels.push(data.vrijwilligerDuur);
 
-      console.log("Extracted labels from form:", labels);
-
-      // Get ticket type from user data
-      const ticketType = wordpressUser.ticketType || wordpressUser.ticket_type || "standard";
-
-      console.log("Ticket type from user data:", ticketType);
-
-      // Create participant payload
-      const participantData = {
+      // Create labels assignment payload
+      const assignmentPayload = {
         username: wordpressUser.username,
-        first_name: wordpressUser.first_name || "",
-        last_name: wordpressUser.last_name || "", 
-        email: wordpressUser.email,
-        track_id: null,
-        ticket_type: ticketType,
-        labels: labels,
-        track: null,
-        activities: [],
-        reviews: []
+        labels: labels
       };
 
-      console.log("WordPress user field mapping:");
-      console.log("- username:", wordpressUser.username);
-      console.log("- first_name:", wordpressUser.first_name);
-      console.log("- last_name:", wordpressUser.last_name);
-      console.log("- email:", wordpressUser.email);
-
-      console.log("=== SUBMITTING PAYLOAD ===");
-      console.log("Payload to be sent:", JSON.stringify(participantData, null, 2));
-      
-      // Submit to participants API
-      console.log("Calling participantsService.create...");
-      const result = await participantsService.create(participantData);
-      console.log("API call successful:", result);
-      
-      showInfo("Profiel succesvol aangemaakt!");
-      
-      // Redirect to track page
-      window.location.hash = '#track';
-      
-    } catch (err) {
-      console.error("=== FORM SUBMISSION ERROR ===");
-      console.error("Error details:", err);
-      console.error("Error message:", err.message);
-      console.error("Error stack:", err.stack);
-      if (err.response) {
-        console.error("API Response:", err.response);
-        console.error("API Response data:", err.response.data);
-        console.error("API Response status:", err.response.status);
+      try {
+        // Call the labels assignment API
+        await labelsService.assignLabels(assignmentPayload);
+        
+        if (!wordpressUser?.username) {
+          showInfo("Labels succesvol toegewezen! Je kunt nu activiteiten bekijken.");
+        } else {
+          
+          try {
+            await fetchSuggestions(wordpressUser.username);
+         
+            showInfo("Labels toegewezen! Bekijk je persoonlijke aanbevelingen.");
+          } catch (suggestionsErr) {
+            showInfo("Labels succesvol toegewezen! Je kunt nu activiteiten bekijken.");
+          }
+        }
+        
+      } catch (generalErr) {
+        showInfo("Labels succesvol toegewezen! Je kunt nu activiteiten bekijken.");
       }
       
-      // Extract error code if it's a validation error
-      let errorMessage = "Submission failed";
-      if (err.message.includes("Validation error")) {
-        // Extract the error code (422) from the response if available
-        errorMessage = "Submission failed (Error 422)";
+      // Refresh user profile to update the hasCompletedWizard state
+      await fetchUserProfile(true);
+      
+      // If using AppRouter, it will automatically redirect to activities
+      // Otherwise, redirect to track page for backward compatibility
+      if (!window.location.hash || window.location.hash === '#') {
+        // Let AppRouter handle the redirect
+        console.info("Profile refreshed, AppRouter will handle routing");
+      } else {
+        // Explicit hash routing, redirect to track page
+        window.location.hash = '#track';
+      }
+      
+    } catch (err) {
+      console.error("Failed to assign labels:", err);
+      
+      // Determine appropriate error message based on the error
+      let errorMessage = "Er ging iets mis bij het toewijzen van je voorkeuren.";
+      
+      if (err.response?.status === 404) {
+        errorMessage = "Gebruiker niet gevonden. Ververs de pagina en probeer opnieuw.";
+      } else if (err.response?.status === 422) {
+        errorMessage = "Ongeldige gegevens. Controleer je invoer en probeer opnieuw.";
+      } else if (err.response?.status === 400) {
+        errorMessage = "Onjuiste aanvraag. Controleer je invoer en probeer opnieuw.";
       } else if (err.response?.status) {
-        errorMessage = `Submission failed (Error ${err.response.status})`;
+        errorMessage = `Er ging iets mis (Error ${err.response.status}). Probeer het opnieuw.`;
+      } else if (err.message) {
+        errorMessage = `Er ging iets mis: ${err.message}`;
       }
       
       showError(errorMessage);
@@ -331,7 +322,7 @@ export default function Wizard() {
       case "multiselect":
         return (
           <fieldset>
-            <legend className="font-semibold">{question.question}</legend>
+            <legend className="font-semibold mb-3">{question.question}</legend>
             {question.options.map((option) => (
               <label key={option.value} className="block">
                 <input
@@ -350,7 +341,7 @@ export default function Wizard() {
       case "singleselect":
         return (
           <fieldset>
-            <legend className="font-semibold">{question.question}</legend>
+            <legend className="font-semibold mb-3">{question.question}</legend>
             {question.options.map((option) => (
               <label key={option.value} className="block">
                 <input
@@ -374,8 +365,8 @@ export default function Wizard() {
   // Loading state while user data is being fetched
   if (userProfileLoading) {
     return (
-      <div className="max-w-lg mx-auto p-4 bg-white rounded-xl shadow space-y-4">
-        <h2 className="text-2xl font-bold">Festival Track Wizard</h2>
+      <div className="max-w-lg mx-auto p-4 bg-white rounded-xl shadow ">
+        <h2 className="text-2xl font-bold mb-6">Festival Track Wizard</h2>
         <p>Gebruikersgegevens laden...</p>
       </div>
     );
@@ -384,8 +375,8 @@ export default function Wizard() {
   // Check if user is logged in
   if (!isUserLoggedIn) {
     return (
-      <div className="max-w-lg mx-auto p-4 bg-white rounded-xl shadow space-y-4">
-        <h2 className="text-2xl font-bold">Festival Track Wizard</h2>
+      <div className="max-w-lg mx-auto p-4 bg-white rounded-xl shadow ">
+        <h2 className="text-2xl font-bold mb-6">Festival Track Wizard</h2>
         <p>Je moet ingelogd zijn om deze wizard te gebruiken.</p>
       </div>
     );
@@ -393,31 +384,29 @@ export default function Wizard() {
 
   return (
     <form onSubmit={(e) => {
-      console.log("Form onSubmit triggered");
-      console.log("Current form errors:", errors);
       return handleSubmit(onSubmit)(e);
-    }} className="max-w-lg mx-auto p-4 bg-white rounded-xl shadow space-y-4">
-      <h2 className="text-2xl font-bold">Festival Track Wizard</h2>
+    }} className="max-w-lg mx-auto p-4 bg-white rounded-xl shadow ">
+      <h2 className="text-2xl font-bold mb-6">Festival Track Wizard</h2>
 
       {renderQuestion(currentQuestion)}
 
-      <div className="flex justify-between mt-4">
+      <div className="flex justify-between mt-12">
         {currentStep > 0 && (
-          <button type="button" onClick={handleBack} className="bg-gray-300 text-gray-800 px-4 py-2 rounded">
-            Back
+          <button type="button" onClick={handleBack} className="bg-gray-300 text-gray-800 px-2 py-1 text-sm rounded">
+            Terug
           </button>
         )}
         {currentVisibleQuestionIndex < visibleQuestions.length - 1 ? (
-          <button type="button" onClick={handleNext} className="bg-blue-600 text-white px-4 py-2 rounded ml-auto">
-            Next
+          <button type="button" onClick={handleNext} className="bg-blue-600 text-white px-2 py-1 text-sm rounded ml-auto">
+            Volgende
           </button>
         ) : (
           <button 
             type="submit" 
-            className="bg-blue-600 text-white px-4 py-2 rounded ml-auto"
+            className="bg-blue-600 text-white px-2 py-1 text-sm rounded ml-auto"
             onClick={() => console.log("Submit button clicked")}
           >
-            Submit
+            Verzenden
           </button>
         )}
       </div>

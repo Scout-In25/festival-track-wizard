@@ -88,7 +88,7 @@ describe('SuggestionsService', () => {
 
       const result = await suggestionsService.getSuggestions(username);
 
-      expect(apiUtils.apiRequest).toHaveBeenCalledWith('get', `/suggestions/suggestions/${username}`);
+      expect(apiUtils.apiRequest).toHaveBeenCalledWith('get', `/suggestions/${username}`);
       expect(result.data).toEqual(mockSuggestions);
       expect(result.data.suggested_tracks).toHaveLength(2);
       expect(result.data.suggested_activities).toHaveLength(1);
@@ -118,7 +118,7 @@ describe('SuggestionsService', () => {
 
       const result = await suggestionsService.getSuggestions(username);
 
-      expect(apiUtils.apiRequest).toHaveBeenCalledWith('get', `/suggestions/suggestions/${username}`);
+      expect(apiUtils.apiRequest).toHaveBeenCalledWith('get', `/suggestions/${username}`);
       expect(result.data).toEqual(mockEmptySuggestions);
       expect(result.data.suggested_tracks).toHaveLength(0);
       expect(result.data.suggested_activities).toHaveLength(0);
@@ -130,7 +130,7 @@ describe('SuggestionsService', () => {
       apiUtils.apiRequest.mockRejectedValue(new Error(errorMessage));
 
       await expect(suggestionsService.getSuggestions(username)).rejects.toThrow(errorMessage);
-      expect(apiUtils.apiRequest).toHaveBeenCalledWith('get', `/suggestions/suggestions/${username}`);
+      expect(apiUtils.apiRequest).toHaveBeenCalledWith('get', `/suggestions/${username}`);
     });
 
     it('should handle API errors when fetching suggestions', async () => {
@@ -139,7 +139,7 @@ describe('SuggestionsService', () => {
       apiUtils.apiRequest.mockRejectedValue(new Error(errorMessage));
 
       await expect(suggestionsService.getSuggestions(username)).rejects.toThrow(errorMessage);
-      expect(apiUtils.apiRequest).toHaveBeenCalledWith('get', `/suggestions/suggestions/${username}`);
+      expect(apiUtils.apiRequest).toHaveBeenCalledWith('get', `/suggestions/${username}`);
     });
 
     it('should handle suggestions with high match scores', async () => {
@@ -231,7 +231,7 @@ describe('SuggestionsService', () => {
       apiUtils.apiRequest.mockRejectedValue(new Error(errorMessage));
 
       await expect(suggestionsService.getSuggestions(username)).rejects.toThrow(errorMessage);
-      expect(apiUtils.apiRequest).toHaveBeenCalledWith('get', `/suggestions/suggestions/${username}`);
+      expect(apiUtils.apiRequest).toHaveBeenCalledWith('get', `/suggestions/${username}`);
     });
 
     it('should handle authentication errors', async () => {
@@ -240,7 +240,7 @@ describe('SuggestionsService', () => {
       apiUtils.apiRequest.mockRejectedValue(new Error(errorMessage));
 
       await expect(suggestionsService.getSuggestions(username)).rejects.toThrow(errorMessage);
-      expect(apiUtils.apiRequest).toHaveBeenCalledWith('get', `/suggestions/suggestions/${username}`);
+      expect(apiUtils.apiRequest).toHaveBeenCalledWith('get', `/suggestions/${username}`);
     });
 
     it('should handle server errors', async () => {
@@ -249,7 +249,7 @@ describe('SuggestionsService', () => {
       apiUtils.apiRequest.mockRejectedValue(new Error(errorMessage));
 
       await expect(suggestionsService.getSuggestions(username)).rejects.toThrow(errorMessage);
-      expect(apiUtils.apiRequest).toHaveBeenCalledWith('get', `/suggestions/suggestions/${username}`);
+      expect(apiUtils.apiRequest).toHaveBeenCalledWith('get', `/suggestions/${username}`);
     });
 
     it('should handle malformed username', async () => {
@@ -258,7 +258,7 @@ describe('SuggestionsService', () => {
       apiUtils.apiRequest.mockRejectedValue(new Error(errorMessage));
 
       await expect(suggestionsService.getSuggestions(username)).rejects.toThrow(errorMessage);
-      expect(apiUtils.apiRequest).toHaveBeenCalledWith('get', `/suggestions/suggestions/${username}`);
+      expect(apiUtils.apiRequest).toHaveBeenCalledWith('get', `/suggestions/${username}`);
     });
 
     it('should handle suggestions with mixed content types', async () => {
@@ -326,6 +326,53 @@ describe('SuggestionsService', () => {
       expect(result.data.user_preferences.interests).toContain('photography');
       expect(result.data.user_preferences.interests).toContain('nature');
       expect(result.data.user_preferences.interests).toContain('games');
+    });
+  });
+
+  describe('development mode mock', () => {
+    it('should return mock suggestions in development mode', async () => {
+      // Create a temporary mock service to test dev mode directly
+      const mockService = new (class extends suggestionsService.constructor {
+        async getSuggestions(username) {
+          // Force development mode behavior
+          console.log(`[SuggestionsService] Returning mock suggestions for ${username}`);
+          const mockData = this._generateMockSuggestions(username);
+          
+          // Simulate API response format
+          return Promise.resolve({
+            data: mockData,
+            status: 200,
+            statusText: 'OK'
+          });
+        }
+      })();
+
+      const username = 'test_user';
+      const result = await mockService.getSuggestions(username);
+
+      expect(result.status).toBe(200);
+      expect(result.data).toHaveProperty('suggested_tracks');
+      expect(result.data).toHaveProperty('suggested_activities');
+      expect(result.data).toHaveProperty('tracks'); // Fallback property
+      expect(result.data).toHaveProperty('activities'); // Fallback property
+      expect(result.data.suggested_tracks).toHaveLength(2);
+      expect(result.data.suggested_activities).toHaveLength(3);
+      expect(result.data.tracks).toHaveLength(2);
+      expect(result.data.activities).toHaveLength(3);
+      
+      // Check structure matches template
+      expect(result.data.tracks[0]).toHaveProperty('id');
+      expect(result.data.tracks[0]).toHaveProperty('title');
+      expect(result.data.tracks[0]).toHaveProperty('match_score');
+      expect(result.data.tracks[0]).toHaveProperty('score'); // Fallback for score
+      expect(result.data.activities[0]).toHaveProperty('id');
+      expect(result.data.activities[0]).toHaveProperty('score');
+      
+      // Verify scores are within expected range (1-100)
+      expect(result.data.tracks[0].score).toBeGreaterThan(0);
+      expect(result.data.tracks[0].score).toBeLessThanOrEqual(100);
+      expect(result.data.activities[0].score).toBeGreaterThan(0);
+      expect(result.data.activities[0].score).toBeLessThanOrEqual(100);
     });
   });
 

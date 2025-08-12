@@ -145,7 +145,8 @@ const Modal = ({
         justifyContent: 'center',
         zIndex: 1000,
         padding: '20px',
-        animation: 'modalFadeIn 0.2s ease-out'
+        animation: 'modalFadeIn 0.2s ease-out',
+        touchAction: 'none' // Prevent touch actions on backdrop
       }}
     >
       <div
@@ -165,7 +166,8 @@ const Modal = ({
           overflow: 'hidden',
           outline: 'none',
           animation: 'modalSlideIn 0.2s ease-out',
-          position: 'relative'
+          position: 'relative',
+          touchAction: 'manipulation' // Allow touch actions but prevent double-tap zoom
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -179,7 +181,7 @@ const Modal = ({
           <h2 
             id={ariaLabelledBy || 'modal-title'}
             style={{
-              margin: 0,
+              margin: '0 0 8px 0',
               fontSize: '1.25rem',
               fontWeight: '600',
               color: '#2c3e50'
@@ -223,7 +225,10 @@ const Modal = ({
           style={{
             padding: '0',
             maxHeight: `calc(${maxHeight} - 100px)`,
-            overflowY: 'auto'
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch', // iOS momentum scrolling
+            touchAction: 'pan-y', // Allow vertical scrolling only
+            overscrollBehavior: 'contain' // Prevent scroll chaining
           }}
           id={ariaDescribedBy}
         >

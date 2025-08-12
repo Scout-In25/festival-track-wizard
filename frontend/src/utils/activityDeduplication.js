@@ -30,7 +30,6 @@ export function createTitleHash(title) {
  */
 export function deduplicateActivities(activities) {
   if (!Array.isArray(activities)) {
-    console.warn('deduplicateActivities: Expected array, got', typeof activities);
     return [];
   }
 
@@ -41,7 +40,6 @@ export function deduplicateActivities(activities) {
     duplicateCount.total++;
     
     if (!activity || typeof activity !== 'object') {
-      console.warn('deduplicateActivities: Invalid activity object', activity);
       return acc;
     }
     
@@ -49,7 +47,6 @@ export function deduplicateActivities(activities) {
     
     // Skip activities with empty/invalid titles
     if (!titleHash) {
-      console.warn('deduplicateActivities: Activity with empty title', activity);
       return acc;
     }
     
@@ -65,24 +62,10 @@ export function deduplicateActivities(activities) {
       acc.push(activityWithHash);
     } else {
       duplicateCount.removed++;
-      // // Optionally log duplicate for debugging
-      // console.debug('Duplicate activity removed:', {
-      //   title: activity.name || activity.title,
-      //   hash: titleHash,
-      //   id: activity.id
-      // });
     }
     
     return acc;
   }, []);
-
-  // Log deduplication results
-  // console.info('Activity deduplication completed:', {
-  //   originalCount: duplicateCount.total,
-  //   duplicatesRemoved: duplicateCount.removed,
-  //   finalCount: uniqueActivities.length,
-  //   uniqueTitles: seenHashes.size
-  // });
 
   return uniqueActivities;
 }
@@ -176,7 +159,6 @@ export function deduplicateActivitiesAdvanced(activities, threshold = 0.9) {
  */
 export function deduplicateActivitiesByTitleAndTime(activities) {
   if (!Array.isArray(activities)) {
-    console.warn('deduplicateActivitiesByTitleAndTime: Expected array, got', typeof activities);
     return [];
   }
 
@@ -187,7 +169,6 @@ export function deduplicateActivitiesByTitleAndTime(activities) {
     duplicateCount.total++;
     
     if (!activity || typeof activity !== 'object') {
-      console.warn('deduplicateActivitiesByTitleAndTime: Invalid activity object', activity);
       return acc;
     }
     
@@ -196,7 +177,6 @@ export function deduplicateActivitiesByTitleAndTime(activities) {
     
     // Skip activities with empty/invalid titles
     if (!titleHash) {
-      console.warn('deduplicateActivitiesByTitleAndTime: Activity with empty title', activity);
       return acc;
     }
     
@@ -218,27 +198,10 @@ export function deduplicateActivitiesByTitleAndTime(activities) {
       acc.push(activityWithKeys);
     } else {
       duplicateCount.removed++;
-      // Log duplicate for debugging
-      console.debug('Duplicate activity removed (title + time):', {
-        title: activity.name || activity.title,
-        startTime: startTime,
-        hash: titleHash,
-        timeKey: timeKey,
-        combinedKey: combinedKey,
-        id: activity.id
-      });
     }
     
     return acc;
   }, []);
-
-  // Log deduplication results
-  console.info('Activity deduplication by title and time completed:', {
-    originalCount: duplicateCount.total,
-    duplicatesRemoved: duplicateCount.removed,
-    finalCount: uniqueActivities.length,
-    uniqueCombinations: seenCombinations.size
-  });
 
   return uniqueActivities;
 }
@@ -251,7 +214,6 @@ export function deduplicateActivitiesByTitleAndTime(activities) {
  */
 export function validateActivities(activities) {
   if (!Array.isArray(activities)) {
-    console.warn('validateActivities: Expected array, got', typeof activities);
     return [];
   }
 
@@ -271,7 +233,6 @@ export function validateActivities(activities) {
     if (!activity || typeof activity !== 'object') {
       validationStats.removed++;
       validationStats.reasons.invalidObject++;
-      console.debug('Invalid activity object removed:', activity);
       return false;
     }
 
@@ -280,11 +241,6 @@ export function validateActivities(activities) {
     if (!name || typeof name !== 'string' || name.trim() === '') {
       validationStats.removed++;
       validationStats.reasons.missingName++;
-      console.debug('Activity removed - missing name/title:', {
-        id: activity.id,
-        name: activity.name,
-        title: activity.title
-      });
       return false;
     }
 
@@ -292,11 +248,6 @@ export function validateActivities(activities) {
     if (!activity.start_time || activity.start_time === null) {
       validationStats.removed++;
       validationStats.reasons.missingStartTime++;
-      console.debug('Activity removed - missing start_time:', {
-        id: activity.id,
-        name: name,
-        start_time: activity.start_time
-      });
       return false;
     }
 
@@ -304,11 +255,6 @@ export function validateActivities(activities) {
     if (!activity.end_time || activity.end_time === null) {
       validationStats.removed++;
       validationStats.reasons.missingEndTime++;
-      console.debug('Activity removed - missing end_time:', {
-        id: activity.id,
-        name: name,
-        end_time: activity.end_time
-      });
       return false;
     }
 
@@ -316,14 +262,6 @@ export function validateActivities(activities) {
     return true;
   });
 
-  // Log validation results
-  console.info('Activity validation completed:', {
-    originalCount: validationStats.total,
-    removedCount: validationStats.removed,
-    validCount: validActivities.length,
-    removalReasons: validationStats.reasons,
-    removalRate: ((validationStats.removed / validationStats.total) * 100).toFixed(1) + '%'
-  });
 
   return validActivities;
 }
