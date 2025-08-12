@@ -178,51 +178,12 @@ function App() {
   );
 }
 
-// Polyfill wp.i18n if not available to prevent errors from other scripts
-const ensureWpI18n = () => {
-  if (typeof window !== 'undefined') {
-    // Initialize wp namespace if it doesn't exist
-    if (!window.wp) {
-      window.wp = {};
-    }
-    
-    // Initialize wp.i18n if it doesn't exist
-    if (!window.wp.i18n) {
-      console.warn('Festival Track Wizard: wp.i18n not available, providing fallback');
-      window.wp.i18n = {
-        // Fallback translation function that just returns the text
-        __: (text, textdomain) => text,
-        _x: (text, context, textdomain) => text,
-        _n: (singular, plural, number, textdomain) => number === 1 ? singular : plural,
-        _nx: (singular, plural, number, context, textdomain) => number === 1 ? singular : plural,
-        
-        // Fallback locale data function that does nothing
-        setLocaleData: (data, textdomain) => {
-          // Silently ignore locale data
-        },
-        
-        // Other common i18n functions
-        sprintf: (format, ...args) => {
-          // Basic sprintf fallback - just replace %s with arguments
-          let result = format;
-          args.forEach(arg => {
-            result = result.replace(/%s/, String(arg));
-          });
-          return result;
-        }
-      };
-    }
-  }
-};
 
 // WordPress-safe initialization
 const initializeApp = () => {
-  // Ensure wp.i18n exists before any scripts run
-  ensureWpI18n();
-  
   const rootElement = document.getElementById('festival-track-wizard-root');
   if (!rootElement) {
-    console.error('Festival Track Wizard: Root element not found');
+    console.error('Scout-In25 : Root element not found');
     return;
   }
 
@@ -233,14 +194,14 @@ const initializeApp = () => {
     const root = ReactDOM.createRoot(rootElement);
     root.render(<App />);
   } catch (error) {
-    console.error('Festival Track Wizard: Initialization failed', error);
+    console.error('Scout-In25 : Initialization failed', error);
     
     // Fallback for older React versions or WordPress conflicts
     try {
       ReactDOM.render(<App />, rootElement);
-      console.log('Festival Track Wizard: App initialized with legacy render');
+      console.log('Scout-In25 : App initialized with legacy render');
     } catch (fallbackError) {
-      console.error('Festival Track Wizard: Fallback initialization also failed', fallbackError);
+      console.error('Scout-In25 : Fallback initialization also failed', fallbackError);
     }
   }
 };

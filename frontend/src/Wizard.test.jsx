@@ -43,7 +43,7 @@ describe('Wizard Component', () => {
 
   test('renders the first question correctly', () => {
     render(<Wizard />);
-    expect(screen.getByText('Festival Track Wizard')).toBeInTheDocument();
+    expect(screen.getByText('Scout-In25')).toBeInTheDocument();
     expect(screen.getByText('Welke rol(len) heb jij?')).toBeInTheDocument();
     expect(screen.getByLabelText('Leiding')).toBeInTheDocument();
     expect(screen.getByLabelText('Bestuur of bestuursondersteuning')).toBeInTheDocument();

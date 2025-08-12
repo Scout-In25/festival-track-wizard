@@ -13,7 +13,7 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, '../build'),
     emptyOutDir: true,
-    minify: true, // Disable minification for debugging
+    minify: false, // Disable minification for debugging
     rollupOptions: {
       output: {
         entryFileNames: 'index.js',

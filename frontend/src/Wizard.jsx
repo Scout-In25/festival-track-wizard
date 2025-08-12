@@ -366,7 +366,7 @@ export default function Wizard() {
   if (userProfileLoading) {
     return (
       <div className="max-w-lg mx-auto p-4 bg-white rounded-xl shadow ">
-        <h2 className="text-2xl font-bold mb-6">Festival Track Wizard</h2>
+        <h2 className="text-2xl font-bold mb-6">Scout-In25 Keuzekompas</h2>
         <p>Gebruikersgegevens laden...</p>
       </div>
     );
@@ -376,7 +376,7 @@ export default function Wizard() {
   if (!isUserLoggedIn) {
     return (
       <div className="max-w-lg mx-auto p-4 bg-white rounded-xl shadow ">
-        <h2 className="text-2xl font-bold mb-6">Festival Track Wizard</h2>
+        <h2 className="text-2xl font-bold mb-6">Scout-In25 Keuzekompas</h2>
         <p>Je moet ingelogd zijn om deze wizard te gebruiken.</p>
       </div>
     );
@@ -386,7 +386,7 @@ export default function Wizard() {
     <form onSubmit={(e) => {
       return handleSubmit(onSubmit)(e);
     }} className="max-w-lg mx-auto p-4 bg-white rounded-xl shadow ">
-      <h2 className="text-2xl font-bold mb-6">Festival Track Wizard</h2>
+      <h2 className="text-2xl font-bold mb-6">Scout-In25 Keuzekompas</h2>
 
       {renderQuestion(currentQuestion)}
 
