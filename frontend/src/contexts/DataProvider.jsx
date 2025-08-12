@@ -223,15 +223,16 @@ export const DataProvider = ({ children }) => {
       
       await tracksService.subscribeScout(username, trackId);
       
-      // Refresh tracks data after subscription
+      // Refresh both tracks data AND user profile to update participant track_id
       await fetchTracks(true);
+      await fetchUserProfile(true);
       
       return { success: true };
     } catch (error) {
       console.error('Failed to subscribe to track:', error.message);
       return { success: false, error: error.message };
     }
-  }, [fetchTracks]);
+  }, [fetchTracks, fetchUserProfile]);
 
   // Unsubscribe from track (with refresh)
   const unsubscribeFromTrack = useCallback(async (username) => {

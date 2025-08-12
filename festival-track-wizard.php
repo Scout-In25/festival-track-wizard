@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Festival Track Wizard
  * Description: A personalized festival tracking wizard.
- * Version: 1.59
+ * Version: 1.64
  * Author: D de Zeeuw / NEKO media
  */
 
@@ -53,10 +53,16 @@ function festival_track_wizard_enqueue_assets() {
     if ($has_wizard_shortcode || $has_simple_shortcode) {
         $api_key = get_option('festival_track_wizard_api_key', '');
         
+        // Check if wp-i18n is available, add it as dependency if so
+        $dependencies = array();
+        if (wp_script_is('wp-i18n', 'registered')) {
+            $dependencies[] = 'wp-i18n';
+        }
+        
         wp_enqueue_script(
             'festival-track-wizard',
             plugin_dir_url(__FILE__) . 'build/index.js',
-            array(),
+            $dependencies,
             filemtime(plugin_dir_path(__FILE__) . 'build/index.js'),
             true
         );
