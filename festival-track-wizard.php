@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Festival Track Wizard
  * Description: A personalized festival tracking wizard.
- * Version: 1.71
+ * Version: 1.75
  * Author: D de Zeeuw / NEKO media
  */
 

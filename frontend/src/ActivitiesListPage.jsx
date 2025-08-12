@@ -203,11 +203,6 @@ const ActivitiesListPage = () => {
 
   // Activity eligibility checker for "Alleen Beschikbaar" filter
   const isActivityEligible = (activity) => {
-    // Check participant data
-    if (!participant) {
-      return false;
-    }
-    
     // Hide activities user is already subscribed to - they're not "available" to add
     if (isUserLoggedIn && isUserSubscribed(activity.id)) {
       return false;
@@ -221,29 +216,8 @@ const ActivitiesListPage = () => {
       }
     }
     
-    const participantLabels = participant.labels;
-    const hasParticipantLabels = participantLabels && Array.isArray(participantLabels) && participantLabels.length > 0;
-    
-    // Check activity requirements
-    const activityLabels = activity.labels;
-    const hasActivityLabels = activityLabels && Array.isArray(activityLabels) && activityLabels.length > 0;
-    
-    // If activity has no label requirements, it's available to everyone (unless there are conflicts)
-    if (!hasActivityLabels) {
-      return true;
-    }
-    
-    // If participant has no labels but activity requires labels, not eligible
-    if (!hasParticipantLabels) {
-      return false;
-    }
-    
-    // Check if participant has any of the required labels
-    const isEligible = activityLabels.some(requiredLabel => 
-      participantLabels.includes(requiredLabel)
-    );
-    
-    return isEligible;
+    // If no conflicts and not subscribed, activity is available
+    return true;
   };
 
   // Filter functions - need to be defined before useMemo hooks
@@ -706,7 +680,7 @@ const ActivitiesListPage = () => {
   const handleResetWizard = async () => {
     // Show confirmation dialog
     const confirmed = window.confirm(
-      'Weet je zeker dat je de keuzekompas opnieuw wilt doorlopen? Je huidige voorkeuren worden verwijderd.'
+      'Weet je zeker dat je het keuzekompas opnieuw wilt doorlopen? Je huidige voorkeuren worden verwijderd.'
     );
     
     if (!confirmed) {
@@ -725,7 +699,7 @@ const ActivitiesListPage = () => {
       const result = await clearUserLabels(username);
       
       if (result.success) {
-        showInfo('Je voorkeuren zijn gereset. Je wordt doorgestuurd naar de keuzekompas...');
+        showInfo('Je voorkeuren zijn gereset. Je wordt doorgestuurd naar het keuzekompas...');
         // The AppRouter will automatically redirect to wizard
         // since hasCompletedWizard will become false after profile refresh
       } else {
@@ -852,7 +826,7 @@ const ActivitiesListPage = () => {
             className="reset-wizard-button ml-3 w-10 h-10 inline-block text-center"
             style={{ padding: '0px' }}
             onClick={handleResetWizard}
-            title="Wil je opnieuw de keuzekompas doorlopen voor nieuwe suggesties, start dan de keuzekompas."
+            title="Wil je opnieuw het keuzekompas doorlopen voor nieuwe suggesties, start dan het keuzekompas."
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
@@ -877,7 +851,7 @@ const ActivitiesListPage = () => {
       
 
       {/* Combined Header with Title and Filters */}
-      <div className="content-header">
+      <div className="main-filter-container content-header">
         <h2>Filters</h2>
 
         <div className="filters-container" role="group" aria-label="Filter activiteiten">

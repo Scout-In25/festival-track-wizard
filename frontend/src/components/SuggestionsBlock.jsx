@@ -3,6 +3,7 @@ import { useDataContext } from '../contexts/DataProvider.jsx';
 import { useToast } from '../hooks/useToast';
 import ActivityDetailsModal from './ActivityDetailsModal.jsx';
 import { activitiesService } from '../services/api/activitiesService.js';
+import { deduplicateActivities } from '../utils/activityDeduplication.js';
 
 // Chevron icons for toggle
 const ChevronDown = () => (
@@ -197,35 +198,25 @@ const SuggestionsBlock = ({ activities, tracks, onTrackFilterApply, onViewModeCh
   }, [firstTrackSuggestion?.id, onTrackFilterApply, onViewModeChange]);
 
 
-  // Get first 10 activity suggestions
-  const firstTenActivities = suggestedActivities.slice(0, 10);
-  // enrich activities with additional data (WordPress-safe)
-  for (let i = 0; i < firstTenActivities.length; i++) {
-    const activity = firstTenActivities[i];
+  // First enrich activities with full data, then deduplicate, then take first 10
+  const enrichedActivities = suggestedActivities.map(activity => {
     if (activity && activity.activity_id) {
       const act = getActivityById(activity.activity_id);
-      
       if (act && typeof act === 'object' && !Array.isArray(act)) {
         try {
-          // Create a new merged object instead of mutating (WordPress-safe)
-          const mergedActivity = { ...activity };
-          
-          // Safely iterate over act properties
-          const actKeys = Object.keys(act);
-          for (const key of actKeys) {
-            if (key && act[key] !== undefined && !Object.prototype.hasOwnProperty.call(mergedActivity, key)) {
-              mergedActivity[key] = act[key];
-            }
-          }
-          
-          // Replace the activity in the array with the merged version
-          firstTenActivities[i] = mergedActivity;
+          // Merge full activity data for deduplication
+          return { ...activity, ...act };
         } catch (error) {
           console.warn('Error merging activity data:', error, { activity, act });
         }
       }
     }
-  }
+    return activity;
+  });
+  
+  // Now deduplicate with enriched data that has proper name/title fields
+  const uniqueSuggestedActivities = deduplicateActivities(enrichedActivities);
+  const firstTenActivities = uniqueSuggestedActivities.slice(0, 10);
 
   // Track subscription handler
   const handleTrackSubscription = async () => {
@@ -619,7 +610,7 @@ const SuggestionsBlock = ({ activities, tracks, onTrackFilterApply, onViewModeCh
               }}>
                 Aanbevolen Track
               </h5>
-              <div className="suggestedtrack suggestion-compact-item" style={{ marginBottom: '32px' }}>
+              <div className="suggestedtrack suggestion-compact-item" style={{ marginBottom: '32px', border: '1px solid #ddd', borderRadius: '6px' }}>
                 <div className="suggestion-compact-content">
                   <div className="suggestion-compact-title">
                     {firstTrackSuggestion.name}
