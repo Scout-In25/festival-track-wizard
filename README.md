@@ -88,6 +88,8 @@ Add these shortcodes to any WordPress page or post:
 |-----------|-------------|--------------|
 | `[festival_track_wizard]` | Full interactive wizard interface | Logged-in users |
 | `[festival_track_simple]` | Public activity list view | Everyone |
+| `[festival_track_admin]` | Admin interface for participant management | Administrators & Editors |
+| `[festival_statistics]` | Festival statistics and activity analytics | Everyone |
 
 ### Example Usage
 
@@ -97,6 +99,12 @@ Add these shortcodes to any WordPress page or post:
 
 <!-- Public activity browser -->
 [festival_track_simple]
+
+<!-- Admin panel for participant management (admin/editor only) -->
+[festival_track_admin]
+
+<!-- Public statistics dashboard -->
+[festival_statistics]
 ```
 
 ### User Roles

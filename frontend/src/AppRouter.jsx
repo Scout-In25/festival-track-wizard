@@ -2,14 +2,17 @@ import React from 'react';
 import { useDataContext } from './contexts/DataProvider';
 import Wizard from './Wizard';
 import ActivitiesListPage from './ActivitiesListPage';
+import Admin from './Admin';
+import Statistics from './Statistics';
 
 /**
  * AppRouter Component
  * 
- * Smart routing component that determines whether to show the Wizard or Activities List
- * based on user authentication status and whether they have completed the wizard (have labels).
+ * Smart routing component that determines whether to show the Wizard, Activities List, or Admin panel
+ * based on user authentication status, display mode, and whether they have completed the wizard (have labels).
  * 
  * Routing Logic:
+ * - Admin mode with proper auth → Admin panel
  * - Not logged in → Activities List (read-only view)
  * - Logged in, no participant profile → Wizard
  * - Logged in, participant without labels → Wizard  
@@ -24,6 +27,24 @@ const AppRouter = () => {
     hasCompletedWizard 
   } = useDataContext();
 
+  // Check display mode
+  const displayMode = window.FestivalWizardData?.displayMode;
+  const isAdmin = window.FestivalWizardData?.isAdmin;
+
+  // If in admin mode and user has admin rights, show admin panel
+  if (displayMode === 'admin' && isAdmin) {
+    return <Admin />;
+  }
+
+  // If in statistics mode, show statistics panel
+  if (displayMode === 'statistics') {
+    return <Statistics />;
+  }
+
+  // In dev mode, check for statistics route
+  if (import.meta.env.DEV && window.location.pathname === '/statistics') {
+    return <Statistics />;
+  }
 
   // Show loading state while fetching user profile
   if (isUserLoggedIn && userProfileLoading) {

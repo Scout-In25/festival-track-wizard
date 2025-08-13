@@ -279,21 +279,21 @@ const ActivityDetailsModal = ({
                           margin: '6px 0',
                           borderRadius: '6px',
                           border: '1px solid #e5e7eb',
-                          backgroundColor: slot.isSubscribed ? '#f0f9ff' : '#fff',
+                          backgroundColor: slot.isCurrentActivity ? '#f3f4ff' : (slot.isSubscribed ? '#f0f9ff' : '#fff'),
                           transition: 'all 0.2s ease'
                         }}
                       >
                         <div style={{ flex: 1 }}>
                           <div style={{ 
                             fontWeight: '600', 
-                            color: slot.isSubscribed ? '#0369a1' : '#374151',
+                            color: slot.isCurrentActivity ? '#7c3aed' : (slot.isSubscribed ? '#0369a1' : '#374151'),
                             marginBottom: '2px'
                           }}>
-                            {dateTime.date}
+                            {slot.isCurrentActivity && '📍 '}{dateTime.date}{slot.isCurrentActivity && ' (huidig)'}
                           </div>
                           <div style={{ 
                             fontSize: '12px', 
-                            color: slot.isSubscribed ? '#0284c7' : '#6b7280'
+                            color: slot.isCurrentActivity ? '#a855f7' : (slot.isSubscribed ? '#0284c7' : '#6b7280')
                           }}>
                             {dateTime.time}
                           </div>
@@ -307,6 +307,7 @@ const ActivityDetailsModal = ({
                             </div>
                           )}
                         </div>
+                        
                         
                         {/* Check if slot is unavailable (full or has conflicts) and user is not subscribed */}
                         {((slot.status === 'full' || slot.status === 'conflict' || slot.hasConflict) && !slot.isSubscribed) ? (
@@ -591,16 +592,63 @@ const ActivityDetailsModal = ({
               </button>
             )}
             
-            {/* Capacity Information */}
+            {/* Capacity Progress Bar */}
             {(activity.capacity || activity.metadata?.max_participants) && (
-              <p style={{ 
-                margin: '12px 0 0 0', 
-                fontSize: '12px', 
-                color: '#64748b',
-                textAlign: 'right'
-              }}>
-                📍 {activity.current_subscriptions || activity.current_participants || 0} van {activity.capacity || activity.metadata?.max_participants} plekken bezet
-              </p>
+              <div style={{ margin: '24px 0 0 0' }}>
+                {(() => {
+                  const current = activity.current_subscriptions || activity.current_participants || 0;
+                  const total = activity.capacity || activity.metadata?.max_participants;
+                  const percentage = Math.min((current / total) * 100, 100);
+                  
+                  // Determine color based on fullness
+                  let progressColor = '#10b981'; // green
+                  if (percentage >= 90) {
+                    progressColor = '#ef4444'; // red
+                  } else if (percentage >= 70) {
+                    progressColor = '#f59e0b'; // orange/yellow
+                  }
+                  
+                  return (
+                    <>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '4px'
+                      }}>
+                        <span style={{ 
+                          fontSize: '12px', 
+                          color: '#374151',
+                          fontWeight: '500'
+                        }}>
+                          Bezetting
+                        </span>
+                        <span style={{ 
+                          fontSize: '12px', 
+                          color: '#6b7280'
+                        }}>
+                          {current} / {total}
+                        </span>
+                      </div>
+                      <div style={{
+                        width: '100%',
+                        height: '8px',
+                        backgroundColor: '#e5e7eb',
+                        borderRadius: '4px',
+                        overflow: 'hidden'
+                      }}>
+                        <div style={{
+                          width: `${percentage}%`,
+                          height: '100%',
+                          backgroundColor: progressColor,
+                          borderRadius: '4px',
+                          transition: 'width 0.3s ease, background-color 0.3s ease'
+                        }} />
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
             )}
           </div>
         )}

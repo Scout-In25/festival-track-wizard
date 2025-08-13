@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Festival Track Wizard
  * Description: A personalized festival tracking wizard.
- * Version: 1.75
+ * Version: 1.95
  * Author: D de Zeeuw / NEKO media
  */
 
@@ -41,6 +41,41 @@ add_shortcode('festival_track_simple', function () {
     return '<div id="festival-track-wizard-root" data-display-mode="simple-readonly"></div>';
 });
 
+add_shortcode('festival_track_admin', function () {
+    // Check if user is logged in
+    if (!is_user_logged_in()) {
+        return '<div class="notice notice-error"><p>Je moet ingelogd zijn om deze pagina te bekijken.</p></div>';
+    }
+    
+    // Check if user has admin or editor capabilities
+    if (!current_user_can('administrator') && !current_user_can('editor')) {
+        return '<div class="notice notice-error"><p>Je hebt geen toegang tot deze pagina.</p></div>';
+    }
+    
+    $api_key = get_option('festival_track_wizard_api_key', '');
+    if (empty($api_key) && current_user_can('manage_options')) {
+        return '<div class="notice notice-warning"><p>Festival Track Wizard: API key not configured. <a href="' . admin_url('options-general.php?page=festival-track-wizard-settings') . '">Configure it here</a>.</p></div>';
+    } elseif (empty($api_key)) {
+        return '<p>Festival Track Wizard is currently being configured. Please try again later.</p>';
+    }
+    
+    // All checks passed - show admin interface
+    return '<div id="festival-track-wizard-root" data-display-mode="admin"></div>';
+});
+
+// Statistics shortcode - shows statistics and activities panels
+add_shortcode('festival_statistics', function () {
+    $api_key = get_option('festival_track_wizard_api_key', '');
+    if (empty($api_key) && current_user_can('manage_options')) {
+        return '<div class="notice notice-warning"><p>Festival Track Wizard: API key not configured. <a href="' . admin_url('options-general.php?page=festival-track-wizard-settings') . '">Configure it here</a>.</p></div>';
+    } elseif (empty($api_key)) {
+        return '<p>Festival Track Wizard is currently being configured. Please try again later.</p>';
+    }
+    
+    // Show statistics interface (no authentication required - public statistics)
+    return '<div id="festival-track-wizard-root" data-display-mode="statistics"></div>';
+});
+
 add_action('wp_enqueue_scripts', 'festival_track_wizard_enqueue_assets');
 function festival_track_wizard_enqueue_assets() {
     global $post;
@@ -48,9 +83,11 @@ function festival_track_wizard_enqueue_assets() {
 
     $has_wizard_shortcode = has_shortcode($post->post_content, 'festival_track_wizard');
     $has_simple_shortcode = has_shortcode($post->post_content, 'festival_track_simple');
+    $has_admin_shortcode = has_shortcode($post->post_content, 'festival_track_admin');
+    $has_statistics_shortcode = has_shortcode($post->post_content, 'festival_statistics');
     
-    // Load assets if either shortcode is present (no login requirement for loading assets)
-    if ($has_wizard_shortcode || $has_simple_shortcode) {
+    // Load assets if any shortcode is present (no login requirement for loading assets)
+    if ($has_wizard_shortcode || $has_simple_shortcode || $has_admin_shortcode || $has_statistics_shortcode) {
         $api_key = get_option('festival_track_wizard_api_key', '');
         
         wp_enqueue_script(
@@ -70,7 +107,11 @@ function festival_track_wizard_enqueue_assets() {
 
         // Determine display mode
         $display_mode = 'full'; // default
-        if ($has_simple_shortcode) {
+        if ($has_admin_shortcode) {
+            $display_mode = 'admin'; // Admin interface
+        } else if ($has_statistics_shortcode) {
+            $display_mode = 'statistics'; // Statistics interface
+        } else if ($has_simple_shortcode) {
             $display_mode = 'simple-readonly'; // Always shows as logged-out
         } else if ($has_wizard_shortcode) {
             $display_mode = 'wizard-simple'; // Simple list but respects login status
@@ -78,6 +119,12 @@ function festival_track_wizard_enqueue_assets() {
 
         $current_user = wp_get_current_user();
         $user_data = null;
+        $is_admin = false;
+        
+        // Check if user has admin/editor rights for admin mode
+        if ($display_mode === 'admin' && is_user_logged_in()) {
+            $is_admin = current_user_can('administrator') || current_user_can('editor');
+        }
         
         // Only include user data if user is logged in AND not in simple-readonly mode
         if (is_user_logged_in() && $display_mode !== 'simple-readonly') {
@@ -88,6 +135,7 @@ function festival_track_wizard_enqueue_assets() {
                 'lastName' => $current_user->last_name,
                 'displayName' => $current_user->display_name,
                 'ticket_type' => get_user_meta($current_user->ID, 'festival_ticket_type', true) ?: 'standard',
+                'isAdmin' => $is_admin,
             );
         }
         
@@ -99,6 +147,7 @@ function festival_track_wizard_enqueue_assets() {
             'apiKey' => $api_key,
             'apiBaseUrl' => get_option('festival_track_wizard_api_base_url', 'https://trackapi.catriox.nl'),
             'displayMode' => $display_mode,
+            'isAdmin' => $is_admin,
             'activitiesTitle' => get_option('festival_track_wizard_activities_title', 'Festival Activiteiten'),
             'activitiesIntro' => get_option('festival_track_wizard_activities_intro', 'Hier vind je alle activiteiten van Scout-In. Je kunt de activiteiten bekijken en beheren in deze lijst.'),
         ]);
@@ -275,6 +324,38 @@ function festival_track_wizard_settings_page() {
                         <em>Note: Always shows as logged-out, regardless of actual login status.</em>
                     </td>
                 </tr>
+                <tr>
+                    <td>
+                        <code style="display: inline-block; padding: 8px 12px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 3px; cursor: pointer;" onclick="navigator.clipboard.writeText('[festival_track_admin]'); alert('Shortcode copied!');">[festival_track_admin]</code>
+                    </td>
+                    <td>
+                        <strong>Admin Interface</strong><br>
+                        Displays the admin panel for participant management and oversight:
+                        <ul style="margin-top: 5px;">
+                            <li>• Participant management interface</li>
+                            <li>• Administrative tools and controls</li>
+                            <li>• Access restricted to administrators and editors only</li>
+                            <li>• Requires user to be logged in with proper permissions</li>
+                        </ul>
+                        <em>Note: Only visible to users with administrator or editor capabilities.</em>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <code style="display: inline-block; padding: 8px 12px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 3px; cursor: pointer;" onclick="navigator.clipboard.writeText('[festival_statistics]'); alert('Shortcode copied!');">[festival_statistics]</code>
+                    </td>
+                    <td>
+                        <strong>Festival Statistics Dashboard</strong><br>
+                        Displays public statistics and analytics about the festival:
+                        <ul style="margin-top: 5px;">
+                            <li>• Festival activity statistics and analytics</li>
+                            <li>• Public data visualization</li>
+                            <li>• No authentication required</li>
+                            <li>• Safe for public pages and caching</li>
+                        </ul>
+                        <em>Note: Public interface accessible to all visitors.</em>
+                    </td>
+                </tr>
             </tbody>
         </table>
         
@@ -282,11 +363,17 @@ function festival_track_wizard_settings_page() {
             <h3 style="margin-top: 0;">Usage Instructions</h3>
             <ol>
                 <li>Copy the desired shortcode by clicking on it</li>
-                <li>Paste the shortcode into any WordPress page or post where you want the activities list to appear</li>
+                <li>Paste the shortcode into any WordPress page or post where you want the interface to appear</li>
                 <li>Make sure you have configured the API key above for the shortcodes to work properly</li>
-                <li>Use <code>[festival_track_wizard]</code> for pages where users can interact with activities</li>
-                <li>Use <code>[festival_track_simple]</code> for public/cached pages where you want a read-only view</li>
             </ol>
+            
+            <h4 style="margin: 15px 0 10px 0;">Shortcode Usage Guide:</h4>
+            <ul style="margin-left: 20px;">
+                <li><strong><code>[festival_track_wizard]</code></strong> - Interactive activities list with login-based features</li>
+                <li><strong><code>[festival_track_simple]</code></strong> - Read-only activities list for public/cached pages</li>
+                <li><strong><code>[festival_track_admin]</code></strong> - Admin interface for participant management (admin/editor only)</li>
+                <li><strong><code>[festival_statistics]</code></strong> - Public statistics dashboard for festival analytics</li>
+            </ul>
         </div>
     </div>
     <?php
@@ -613,5 +700,290 @@ function festival_track_wizard_activities_unsubscribe() {
     }
 
     wp_send_json_success(array('message' => 'Successfully unsubscribed from activity'));
+}
+
+// Admin-specific AJAX handlers
+// Subscribe any user to activity (admin only)
+add_action('wp_ajax_festival_admin_subscribe_user', 'festival_track_wizard_admin_subscribe_user');
+
+function festival_track_wizard_admin_subscribe_user() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'festival_track_wizard_nonce')) {
+        wp_die('Security check failed', 'Error', array('response' => 403));
+    }
+
+    // Check if user has admin or editor capabilities
+    if (!current_user_can('administrator') && !current_user_can('editor')) {
+        wp_send_json_error('Unauthorized access', 403);
+        return;
+    }
+
+    if (empty($_POST['username']) || empty($_POST['activity_id'])) {
+        wp_send_json_error('Username and activity ID are required', 400);
+        return;
+    }
+
+    $username = sanitize_text_field($_POST['username']);
+    $activity_id = sanitize_text_field($_POST['activity_id']);
+    $api_key = get_option('festival_track_wizard_api_key', '');
+    $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://trackapi.catriox.nl');
+    
+    if (empty($api_key)) {
+        wp_send_json_error('API key not configured', 500);
+        return;
+    }
+
+    $url = rtrim($api_base_url, '/') . '/activities/subscribe/' . $username . '/' . $activity_id;
+    
+    $response = wp_remote_request($url, array(
+        'method' => 'PUT',
+        'headers' => array(
+            'X-API-KEY' => $api_key,
+            'Content-Type' => 'application/json'
+        ),
+        'timeout' => 30
+    ));
+
+    if (is_wp_error($response)) {
+        wp_send_json_error('Failed to subscribe user to activity: ' . $response->get_error_message(), 500);
+        return;
+    }
+
+    $status_code = wp_remote_retrieve_response_code($response);
+    $body = wp_remote_retrieve_body($response);
+
+    if ($status_code !== 200 && $status_code !== 201 && $status_code !== 204) {
+        wp_send_json_error('API request failed with status ' . $status_code . ': ' . $body, $status_code);
+        return;
+    }
+
+    wp_send_json_success(array('message' => 'Successfully subscribed user to activity'));
+}
+
+// Unsubscribe any user from activity (admin only)
+add_action('wp_ajax_festival_admin_unsubscribe_user', 'festival_track_wizard_admin_unsubscribe_user');
+
+function festival_track_wizard_admin_unsubscribe_user() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'festival_track_wizard_nonce')) {
+        wp_die('Security check failed', 'Error', array('response' => 403));
+    }
+
+    // Check if user has admin or editor capabilities
+    if (!current_user_can('administrator') && !current_user_can('editor')) {
+        wp_send_json_error('Unauthorized access', 403);
+        return;
+    }
+
+    if (empty($_POST['username']) || empty($_POST['activity_id'])) {
+        wp_send_json_error('Username and activity ID are required', 400);
+        return;
+    }
+
+    $username = sanitize_text_field($_POST['username']);
+    $activity_id = sanitize_text_field($_POST['activity_id']);
+    $api_key = get_option('festival_track_wizard_api_key', '');
+    $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://trackapi.catriox.nl');
+    
+    if (empty($api_key)) {
+        wp_send_json_error('API key not configured', 500);
+        return;
+    }
+
+    $url = rtrim($api_base_url, '/') . '/activities/unsubscribe/' . $username . '/' . $activity_id;
+    
+    $response = wp_remote_request($url, array(
+        'method' => 'PUT',
+        'headers' => array(
+            'X-API-KEY' => $api_key,
+            'Content-Type' => 'application/json'
+        ),
+        'timeout' => 30
+    ));
+
+    if (is_wp_error($response)) {
+        wp_send_json_error('Failed to unsubscribe user from activity: ' . $response->get_error_message(), 500);
+        return;
+    }
+
+    $status_code = wp_remote_retrieve_response_code($response);
+    $body = wp_remote_retrieve_body($response);
+
+    if ($status_code !== 200 && $status_code !== 201 && $status_code !== 204) {
+        wp_send_json_error('API request failed with status ' . $status_code . ': ' . $body, $status_code);
+        return;
+    }
+
+    wp_send_json_success(array('message' => 'Successfully unsubscribed user from activity'));
+}
+
+// Clear labels for a user (admin only)
+add_action('wp_ajax_festival_admin_clear_labels', 'festival_track_wizard_admin_clear_labels');
+
+function festival_track_wizard_admin_clear_labels() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'festival_track_wizard_nonce')) {
+        wp_die('Security check failed', 'Error', array('response' => 403));
+    }
+
+    // Check if user has admin or editor capabilities
+    if (!current_user_can('administrator') && !current_user_can('editor')) {
+        wp_send_json_error('Unauthorized access', 403);
+        return;
+    }
+
+    if (empty($_POST['username'])) {
+        wp_send_json_error('Username is required', 400);
+        return;
+    }
+
+    $username = sanitize_text_field($_POST['username']);
+    $api_key = get_option('festival_track_wizard_api_key', '');
+    $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://trackapi.catriox.nl');
+    
+    if (empty($api_key)) {
+        wp_send_json_error('API key not configured', 500);
+        return;
+    }
+
+    $url = rtrim($api_base_url, '/') . '/labels/clear/' . $username;
+    
+    $response = wp_remote_request($url, array(
+        'method' => 'POST',
+        'headers' => array(
+            'X-API-KEY' => $api_key,
+            'Content-Type' => 'application/json'
+        ),
+        'timeout' => 30
+    ));
+
+    if (is_wp_error($response)) {
+        wp_send_json_error('Failed to clear user labels: ' . $response->get_error_message(), 500);
+        return;
+    }
+
+    $status_code = wp_remote_retrieve_response_code($response);
+    $body = wp_remote_retrieve_body($response);
+
+    if ($status_code !== 200 && $status_code !== 201 && $status_code !== 204) {
+        wp_send_json_error('API request failed with status ' . $status_code . ': ' . $body, $status_code);
+        return;
+    }
+
+    wp_send_json_success(array('message' => 'Successfully cleared user labels'));
+}
+
+// Helper function to fetch participants from API
+function festival_track_wizard_fetch_participants_from_api() {
+    $api_key = get_option('festival_track_wizard_api_key', '');
+    $api_base_url = get_option('festival_track_wizard_api_base_url', 'https://trackapi.catriox.nl');
+    
+    if (empty($api_key)) {
+        return array('error' => 'API key not configured');
+    }
+
+    $url = rtrim($api_base_url, '/') . '/participants/';
+    
+    $response = wp_remote_get($url, array(
+        'headers' => array(
+            'X-API-KEY' => $api_key,
+            'Content-Type' => 'application/json'
+        ),
+        'timeout' => 30
+    ));
+
+    if (is_wp_error($response)) {
+        return array('error' => 'Failed to fetch participants: ' . $response->get_error_message());
+    }
+
+    $status_code = wp_remote_retrieve_response_code($response);
+    $body = wp_remote_retrieve_body($response);
+
+    if ($status_code !== 200) {
+        return array('error' => 'API request failed with status ' . $status_code);
+    }
+
+    $data = json_decode($body, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        return array('error' => 'Invalid JSON response from API');
+    }
+
+    return array('success' => true, 'data' => $data);
+}
+
+// Helper function to get cached participants data
+function festival_track_wizard_get_cached_participants($force_refresh = false) {
+    $cache_key = 'festival_track_wizard_participants_cache';
+    $cache_time_key = 'festival_track_wizard_participants_cache_time';
+    $cache_duration = 5 * 60; // 5 minutes
+    
+    // Check if we should use cache
+    if (!$force_refresh) {
+        $cached_data = get_transient($cache_key);
+        $cached_time = get_transient($cache_time_key);
+        
+        if ($cached_data !== false && $cached_time !== false) {
+            $age = time() - $cached_time;
+            if ($age < $cache_duration) {
+                error_log("Festival Track Wizard: Using cached participants data (age: {$age}s)");
+                return array('success' => true, 'data' => $cached_data, 'cached' => true, 'cache_age' => $age);
+            }
+        }
+    }
+    
+    // Fetch fresh data from API
+    error_log("Festival Track Wizard: Fetching fresh participants data" . ($force_refresh ? " (forced)" : " (cache expired)"));
+    $result = festival_track_wizard_fetch_participants_from_api();
+    
+    if (isset($result['error'])) {
+        return $result;
+    }
+    
+    // Cache the data
+    $current_time = time();
+    set_transient($cache_key, $result['data'], $cache_duration);
+    set_transient($cache_time_key, $current_time, $cache_duration);
+    
+    error_log("Festival Track Wizard: Cached " . count($result['data']) . " participants");
+    
+    return array('success' => true, 'data' => $result['data'], 'cached' => false, 'cache_age' => 0);
+}
+
+// Get all participants (admin only) - with caching
+add_action('wp_ajax_festival_admin_get_all_participants', 'festival_track_wizard_admin_get_all_participants');
+
+function festival_track_wizard_admin_get_all_participants() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'festival_track_wizard_nonce')) {
+        wp_die('Security check failed', 'Error', array('response' => 403));
+    }
+
+    // Check if user has admin or editor capabilities
+    if (!current_user_can('administrator') && !current_user_can('editor')) {
+        wp_send_json_error('Unauthorized access', 403);
+        return;
+    }
+
+    // Check if force refresh is requested
+    $force_refresh = isset($_POST['force_refresh']) && $_POST['force_refresh'] === 'true';
+    
+    $result = festival_track_wizard_get_cached_participants($force_refresh);
+    
+    if (isset($result['error'])) {
+        wp_send_json_error($result['error'], 500);
+        return;
+    }
+    
+    // Add cache info to response
+    $response_data = array(
+        'data' => $result['data'],
+        'cache_info' => array(
+            'cached' => $result['cached'],
+            'cache_age' => $result['cache_age'],
+            'timestamp' => time()
+        )
+    );
+
+    wp_send_json_success($response_data);
 }
 ?>

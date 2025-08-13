@@ -4,6 +4,8 @@ import Wizard from './Wizard.jsx';
 import TrackPage from './TrackPage.jsx';
 import ActivitiesListPage from './ActivitiesListPage.jsx';
 import AppRouter from './AppRouter.jsx';
+import Admin from './Admin.jsx';
+import Statistics from './Statistics.jsx';
 import { DataProvider } from './contexts/DataProvider.jsx';
 import { ToastProvider } from './contexts/ToastProvider.jsx';
 
@@ -13,12 +15,17 @@ if (import.meta.env.DEV) {
   
   // Setup development environment data
   if (!window.FestivalWizardData) {
+    // Check if we're testing admin mode via environment variable
+    const testAdminMode = import.meta.env.VITE_ADMIN_MODE === 'true';
+    const displayMode = testAdminMode ? 'admin' : 'wizard-simple';
+    
     window.FestivalWizardData = {
       ajaxUrl: '/wp-admin/admin-ajax.php',
       nonce: 'dev-nonce',
       apiKey: import.meta.env.VITE_API_KEY || 'dev-api-key',
       apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'https://trackapi.catriox.nl',
-      displayMode: 'wizard-simple', // Use wizard-simple mode in development
+      displayMode: displayMode, // Use admin or wizard-simple mode based on env var
+      isAdmin: testAdminMode, // Set admin flag for testing
       // Login state in dev mode:
       // - Set VITE_USERNAME to test with real user data (logged in)
       // - Leave unset to test logged-out state (shows activities read-only)
@@ -29,7 +36,8 @@ if (import.meta.env.DEV) {
         firstName: import.meta.env.VITE_USER_FIRST_NAME || 'Dev',
         lastName: import.meta.env.VITE_USER_LAST_NAME || 'User',
         displayName: import.meta.env.VITE_USER_DISPLAY_NAME || 'Dev User',
-        ticket_type: import.meta.env.VITE_USER_TICKET_TYPE || 'standard'
+        ticket_type: import.meta.env.VITE_USER_TICKET_TYPE || 'standard',
+        isAdmin: testAdminMode // Include admin flag in user data for dev
       },
       activitiesTitle: 'Scout-in Activiteiten',
       activitiesIntro: 'Development mode activities intro'
@@ -83,6 +91,22 @@ import './styles.scss';
 function App() {
   // Get display mode from WordPress data
   const getDisplayMode = React.useCallback(() => {
+    // First check if we need to read data-display-mode from DOM element
+    if (typeof window !== 'undefined') {
+      const rootElement = document.getElementById('festival-track-wizard-root');
+      if (rootElement) {
+        const domDisplayMode = rootElement.getAttribute('data-display-mode');
+        if (domDisplayMode) {
+          // Ensure FestivalWizardData exists
+          if (!window.FestivalWizardData) {
+            window.FestivalWizardData = {};
+          }
+          // Set the display mode from DOM attribute
+          window.FestivalWizardData.displayMode = domDisplayMode;
+        }
+      }
+    }
+    
     if (typeof window !== 'undefined' && window.FestivalWizardData && window.FestivalWizardData.displayMode) {
       return window.FestivalWizardData.displayMode;
     }
@@ -96,6 +120,16 @@ function App() {
   // Determine default page based on display mode
   const getDefaultPage = React.useCallback(() => {
     const displayMode = getDisplayMode();
+    
+    // For admin mode, return 'smart-route' to trigger AppRouter
+    if (displayMode === 'admin') {
+      return 'smart-route';
+    }
+    
+    // For statistics mode, return 'smart-route' to trigger AppRouter
+    if (displayMode === 'statistics') {
+      return 'smart-route';
+    }
     
     // For wizard-simple mode, return 'smart-route' to trigger AppRouter
     if (displayMode === 'wizard-simple') {
@@ -143,6 +177,25 @@ function App() {
       break;
     case 'wizard':
       ComponentToRender = Wizard;
+      break;
+    case 'admin':
+      // Direct admin route for local development
+      // Ensure admin flags are set when using this route
+      if (import.meta.env.DEV && window.FestivalWizardData) {
+        window.FestivalWizardData.displayMode = 'admin';
+        window.FestivalWizardData.isAdmin = true;
+        if (window.FestivalWizardData.currentUser) {
+          window.FestivalWizardData.currentUser.isAdmin = true;
+        }
+      }
+      ComponentToRender = Admin;
+      break;
+    case 'statistics':
+      // Direct statistics route for local development
+      if (import.meta.env.DEV && window.FestivalWizardData) {
+        window.FestivalWizardData.displayMode = 'statistics';
+      }
+      ComponentToRender = Statistics;
       break;
     case 'smart-route':
       // Use AppRouter for smart routing based on labels

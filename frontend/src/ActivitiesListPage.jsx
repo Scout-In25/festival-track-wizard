@@ -208,6 +208,13 @@ const ActivitiesListPage = () => {
       return false;
     }
     
+    // Check if activity is full - if so, it's not available to add
+    const capacity = activity.capacity || activity.metadata?.max_participants;
+    const currentSubscriptions = activity.current_subscriptions || activity.current_participants || 0;
+    if (capacity && currentSubscriptions >= capacity) {
+      return false;
+    }
+    
     // Check for time conflicts - if activity has conflict, it's not eligible
     if (isUserLoggedIn) {
       const conflicts = getConflictingActivities(activity);
@@ -216,7 +223,7 @@ const ActivitiesListPage = () => {
       }
     }
     
-    // If no conflicts and not subscribed, activity is available
+    // If no conflicts, not subscribed, and not full, activity is available
     return true;
   };
 
@@ -640,10 +647,7 @@ const ActivitiesListPage = () => {
     
     return activities
       .filter(activity => {
-        // Exclude the current activity itself
-        if (activity.id === targetActivity.id) return false;
-        
-        // Match by title hash
+        // Match by title hash (including the current activity itself)
         const activityTitleHash = createTitleHash(activity.name || activity.title || '');
         return activityTitleHash === titleHash;
       })
@@ -652,7 +656,8 @@ const ActivitiesListPage = () => {
         ...slot,
         isSubscribed: isUserSubscribed(slot.id),
         status: getActivityStatus(slot),
-        hasConflict: isUserLoggedIn ? getConflictingActivities(slot).length > 0 : false
+        hasConflict: isUserLoggedIn ? getConflictingActivities(slot).length > 0 : false,
+        isCurrentActivity: slot.id === targetActivity.id
       }));
   };
 
